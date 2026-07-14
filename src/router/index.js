@@ -8,8 +8,29 @@ const routes = [
   },
   {
     path: '/board',
-    name: 'board',
-    component: () => import('@/features/board/views/BoardView.vue'),
+    name: 'board-list',
+    component: () => import('@/features/board/views/BoardListView.vue'),
+  },
+  {
+    path: '/board/new',
+    name: 'board-new',
+    component: () => import('@/features/board/views/BoardFormView.vue'),
+  },
+  {
+    path: '/board/bookmarks',
+    name: 'board-bookmarks',
+    component: () => import('@/features/board/views/BoardListView.vue'),
+    props: { showBookmarks: true },
+  },
+  {
+    path: '/board/:id',
+    name: 'board-detail',
+    component: () => import('@/features/board/views/BoardDetailView.vue'),
+  },
+  {
+    path: '/board/:id/edit',
+    name: 'board-edit',
+    component: () => import('@/features/board/views/BoardFormView.vue'),
   },
   {
     path: '/regions',

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { regionCategories } from '../data/regionCategories'
 import tourismData from '../../../../data/부산_관광지.json'
 import leisureData from '../../../../data/부산_레포츠.json'
@@ -14,6 +14,14 @@ const selectedCategory = ref('관광지')
 const mapContainer = ref(null)
 const mapInstance = ref(null)
 const markerLayer = ref(null)
+
+// contentid -> Leaflet marker 캐시 (선택 변경 시 재생성하지 않기 위함)
+const markerMap = new Map()
+
+// 카테고리 전환에 의한 재렌더링 중인지 여부 (이때는 panTo 하지 않음)
+let isRendering = false
+let resizeObserver = null
+let canvasRenderer = null
 
 const categoryDataMap = {
   관광지: tourismData,
@@ -61,57 +69,145 @@ const selectedItem = computed(() => {
   )
 })
 
-const createMarkerIcon = (isSelected) => {
-  if (typeof window === 'undefined' || !window.L) return null
-  return window.L.divIcon({
-    html: `<div style="width:14px;height:14px;border-radius:999px;border:2px solid white;background:${isSelected ? '#e86f42' : '#174f40'};box-shadow:0 4px 10px rgba(0,0,0,0.25);"></div>`,
-    className: '',
-    iconSize: [14, 14],
-    iconAnchor: [7, 7],
+// 줌 레벨 → 마커 반지름(px)
+const MIN_RADIUS = 4
+const MAX_RADIUS = 11
+
+const radiusForZoom = (zoom) => {
+  const z = typeof zoom === 'number' ? zoom : 10
+  const r = (z - 8) * 1.25 + 5
+  return Math.max(MIN_RADIUS, Math.min(MAX_RADIUS, r))
+}
+
+const markerStyle = (isSelected, zoom) => {
+  const r = radiusForZoom(zoom)
+  return {
+    radius: isSelected ? r + 2 : r,
+    color: '#fff',
+    weight: r >= 7 ? 2 : 1,
+    opacity: 1,
+    fillColor: isSelected ? '#e86f42' : '#174f40',
+    fillOpacity: 1,
+  }
+}
+
+/**
+ * 줌이 끝난 뒤 반지름/색상만 갱신.
+ * canvas 렌더러라 DOM 재생성이 없어 수백~수천 개여도 프레임 드랍이 없다.
+ */
+const refreshMarkerSizes = () => {
+  if (!mapInstance.value) return
+  const zoom = mapInstance.value.getZoom()
+  const selected = selectedItem.value?.contentid
+  markerMap.forEach((marker, id) => {
+    marker.setStyle(markerStyle(id === selected, zoom))
   })
 }
 
+/**
+ * 카테고리(=마커 목록)가 바뀔 때만 호출.
+ * 마커를 새로 그리고, 이때만 fitBounds로 화면을 맞춘다.
+ */
 const renderMarkers = () => {
   if (!mapInstance.value || !markerLayer.value || typeof window === 'undefined' || !window.L) return
 
+  isRendering = true
   markerLayer.value.clearLayers()
+  markerMap.clear()
+
+  const zoom = mapInstance.value.getZoom()
 
   const markers = activeItems.value.map((item) => {
-    const marker = window.L.marker([Number(item.mapy), Number(item.mapx)], {
-      title: item.title,
-      icon: createMarkerIcon(item.contentid === selectedItem.value?.contentid),
-      riseOnHover: true,
-    })
+    const marker = window.L.circleMarker(
+      [Number(item.mapy), Number(item.mapx)],
+      {
+        ...markerStyle(item.contentid === selectedItem.value?.contentid, zoom),
+        renderer: canvasRenderer, // canvas에 그리므로 마커당 DOM 노드가 생기지 않는다
+        interactive: true,
+        bubblingMouseEvents: false,
+      }
+    )
 
     marker.on('click', () => {
+      // 시점 변경 없이 선택 상태만 변경
       selectedId.value = item.contentid
     })
 
-    marker.bindPopup(`<strong>${item.title}</strong><br>${item.addr1}`)
+    marker.bindPopup(`<strong>${item.title}</strong><br>${item.addr1}`, {
+      autoPan: false,
+      closeButton: true,
+    })
+
+    markerMap.set(item.contentid, marker)
     return marker
   })
 
   markers.forEach((marker) => markerLayer.value.addLayer(marker))
 
+  // 이전 카테고리에서 열려 있던 팝업 정리
+  mapInstance.value.closePopup()
+
   if (markers.length) {
     const bounds = window.L.latLngBounds(markers.map((marker) => marker.getLatLng()))
-    mapInstance.value.fitBounds(bounds.pad(0.2))
+    mapInstance.value.fitBounds(bounds.pad(0.2), { animate: false })
   }
+
+  isRendering = false
+
+  // fitBounds로 줌이 바뀐 경우를 대비해 크기 동기화
+  refreshMarkerSizes()
 }
 
+/**
+ * 선택이 바뀔 때는 마커를 다시 만들지 않고 아이콘만 교체.
+ * 줌 레벨은 그대로 두고, 선택한 마커로만 부드럽게 팬(pan)한다.
+ */
+const updateSelectedMarkerStyle = (newId, oldId) => {
+  if (!mapInstance.value) return
+  const zoom = mapInstance.value.getZoom()
+
+  const oldMarker = markerMap.get(oldId)
+  if (oldMarker) oldMarker.setStyle(markerStyle(false, zoom))
+
+  const newMarker = markerMap.get(newId)
+  if (!newMarker) return
+
+  newMarker.setStyle(markerStyle(true, zoom))
+  newMarker.bringToFront()
+
+  // 카테고리 전환으로 인한 자동 선택일 때는 이동시키지 않는다(fitBounds가 이미 처리).
+  if (isRendering) return
+
+  // 줌 레벨 유지 + 부드러운 이동
+  mapInstance.value.panTo(newMarker.getLatLng(), {
+    animate: true,
+    duration: 0.45,
+    easeLinearity: 0.25,
+  })
+}
+
+// 마커 목록(=카테고리) 자체가 바뀔 때만 재렌더링 + fitBounds.
+// flush: 'post' → selectedId 리셋 등 다른 watch가 모두 끝난 뒤에 실행되므로
+// 새 카테고리의 선택 상태가 정확히 반영된 채로 마커가 그려진다.
 watch(
   activeItems,
   () => {
     renderMarkers()
   },
-  { deep: true }
+  { flush: 'post' }
 )
 
-watch(selectedItem, () => {
-  renderMarkers()
-})
+// 선택만 바뀔 때는 아이콘 색상만 교체 (지도 시점 그대로 유지)
+watch(
+  () => selectedItem.value?.contentid,
+  (newId, oldId) => {
+    updateSelectedMarkerStyle(newId, oldId)
+  },
+  { flush: 'post' }
+)
 
 const selectCategory = (name) => {
+  if (selectedCategory.value === name) return
   selectedCategory.value = name
 }
 
@@ -122,6 +218,8 @@ onMounted(() => {
     .map(mapContainer.value, {
       zoomControl: true,
       scrollWheelZoom: true,
+      zoomAnimation: true,
+      markerZoomAnimation: true,
     })
     .setView([35.17, 129.07], 10)
 
@@ -129,18 +227,41 @@ onMounted(() => {
     attribution: '&copy; OpenStreetMap contributors',
   }).addTo(mapInstance.value)
 
+  // 마커를 DOM이 아닌 단일 canvas에 그린다 → 줌/팬 시 렉 제거
+  canvasRenderer = window.L.canvas({ padding: 0.5 })
+
   markerLayer.value = window.L.layerGroup()
   markerLayer.value.addTo(mapInstance.value)
 
+  // 줌이 끝날 때마다 아이콘 크기 재계산 (줌 중에는 건드리지 않아 어긋남 없음)
+  mapInstance.value.on('zoomend', refreshMarkerSizes)
+
   renderMarkers()
+
+  // 컨테이너 크기가 초기화 이후에 바뀌면 Leaflet 내부 좌표계가 어긋나
+  // 줌할 때 마커가 타일과 따로 노는 현상이 생긴다 → invalidateSize로 재계산
+  nextTick(() => mapInstance.value?.invalidateSize())
+
+  if (typeof ResizeObserver !== 'undefined') {
+    resizeObserver = new ResizeObserver(() => {
+      mapInstance.value?.invalidateSize()
+    })
+    resizeObserver.observe(mapContainer.value)
+  }
 })
 
 onBeforeUnmount(() => {
+  if (resizeObserver) {
+    resizeObserver.disconnect()
+    resizeObserver = null
+  }
   if (mapInstance.value) {
+    mapInstance.value.off('zoomend', refreshMarkerSizes)
     mapInstance.value.remove()
     mapInstance.value = null
   }
   markerLayer.value = null
+  markerMap.clear()
 })
 </script>
 
@@ -205,3 +326,21 @@ onBeforeUnmount(() => {
     <p class="source-note">데이터 출처: 한국관광공사 TourAPI 4.0 · 공공누리 제3유형</p>
   </section>
 </template>
+
+<style>
+/* Leaflet의 줌 애니메이션은 .leaflet-zoom-animated의 CSS transform 전환에 의존한다.
+   전역 CSS(* { transition: ... })가 이를 덮으면 줌이 끊겨 보이므로,
+   Leaflet 내부 요소는 전역 전환 효과에서 제외하되 Leaflet 자체 애니메이션은 살려 둔다. */
+.leaflet-container * {
+  transition: none;
+}
+
+.leaflet-zoom-anim .leaflet-zoom-animated {
+  transition: transform 0.25s cubic-bezier(0, 0, 0.25, 1) !important;
+  will-change: transform;
+}
+
+.map-frame {
+  min-height: 420px;
+}
+</style>

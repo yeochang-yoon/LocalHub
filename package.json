@@ -14,9 +14,9 @@
   },
   "dependencies": {
     "@vitejs/plugin-vue": "latest",
+    "sql.js": "^1.14.1",
     "vite": "latest",
     "vue": "latest",
     "vue-router": "latest"
-  },
-  "devDependencies": {}
+  }
 }

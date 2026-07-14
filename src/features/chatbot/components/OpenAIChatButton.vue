@@ -30,8 +30,8 @@ function createMessageId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 }
 
-function createMessage(role, content) {
-  return { id: createMessageId(), role, content }
+function createMessage(role, content, links = []) {
+  return { id: createMessageId(), role, content, links }
 }
 
 function loadState() {
@@ -71,7 +71,7 @@ async function sendMessage(text = input.value) {
 
   try {
     const reply = await askOpenAI(messages.value.map(({ role, content }) => ({ role, content })))
-    messages.value = [...messages.value, createMessage('assistant', reply)].slice(-MAX_MESSAGES)
+    messages.value = [...messages.value, createMessage('assistant', reply.content, reply.links)].slice(-MAX_MESSAGES)
   } catch (error) {
     messages.value = [...messages.value, createMessage('assistant', error?.message || '답변을 가져오지 못했습니다.')].slice(-MAX_MESSAGES)
   } finally {
@@ -117,6 +117,11 @@ watch([messages, isOpen], persistState, { deep: true })
       <article v-for="message in messages" :key="message.id" :class="['chat-message', message.role]">
         <span class="chat-role">{{ message.role === 'assistant' ? 'AI' : '나' }}</span>
         <p>{{ message.content }}</p>
+        <nav v-if="message.links?.length" class="chat-links" aria-label="관련 게시글">
+          <RouterLink v-for="link in message.links" :key="`${message.id}-${link.label}`" :to="link.to" @click="closePanel">
+            {{ link.label }}
+          </RouterLink>
+        </nav>
       </article>
       <p v-if="loading" class="chat-message assistant chat-loading">답변을 찾고 있어요…</p>
     </div>

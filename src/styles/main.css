@@ -138,6 +138,9 @@ button.service-card { width: 100%; color: inherit; cursor: pointer; }
 .chat-message.user p { color: white; }
 .chat-role { display: inline-flex; align-items: center; min-height: 18px; padding: 0 7px; border-radius: 999px; background: rgba(23,79,64,.08); color: var(--green); font-size: 10px; font-weight: 700; letter-spacing: .04em; }
 .chat-message.user .chat-role { background: rgba(255,255,255,.18); color: white; }
+.chat-links { display: grid; gap: 6px; margin-top: 9px; }
+.chat-links a { padding: 8px 10px; color: var(--green); border: 1px solid #d6dfd8; border-radius: 9px; background: #f7faf6; font-size: 12px; font-weight: 700; }
+.chat-links a:hover { border-color: var(--green); background: white; }
 .chat-loading { opacity: .75; }
 .chat-form { display: flex; gap: 8px; padding: 12px; border-top: 1px solid #eef1ed; background: white; }
 .chat-form input { flex: 1; min-width: 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; outline: 0; }

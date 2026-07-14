@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "test:openai": "node scripts/openai-smoke-test.mjs",
     "test:openai-parser": "node scripts/openai-response-parser-test.mjs",
-    "test:chat-query": "node scripts/chat-query-planner-test.mjs"
+    "test:chat-query": "node scripts/chat-query-planner-test.mjs",
+    "test:board-chat": "node scripts/board-chat-search-test.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-vue": "latest",

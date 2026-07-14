@@ -5,7 +5,7 @@ import courseData from '../../../../data/부산_여행코스.json'
 import leisureData from '../../../../data/부산_레포츠.json'
 import stayData from '../../../../data/부산_숙박.json'
 import shoppingData from '../../../../data/부산_쇼핑.json'
-import { loadPosts } from '../../board/services/boardStorage'
+import { searchPostsForChat } from '../../board/services/boardStorage'
 import { extractOpenAIText } from './openaiResponse'
 import { analyzeQuery, CATEGORY_ALIASES, distanceKm, extractDistrict, normalizeText } from './queryPlanner'
 
@@ -99,18 +99,10 @@ function searchPlaces(plan, previousResults = []) {
 }
 
 function searchPosts(plan) {
-  const posts = loadPosts()
-  return posts
-    .map((post) => {
-      const searchable = normalizeText(`${post.title} ${post.content} ${post.author}`)
-      const score = plan.tokens.reduce((total, token) => total + (searchable.includes(normalizeText(token)) ? 10 : 0), 0)
-
-      return { post, score }
-    })
-    .filter((entry) => entry.score > 0)
-    .sort((left, right) => right.score - left.score)
-    .slice(0, plan.limit)
-    .map(({ post }) => ({ title: post.title, author: post.author, createdAt: post.createdAt, content: post.content }))
+  return searchPostsForChat(plan.tokens, plan.limit).map((post) => ({
+    ...post,
+    route: `/board/${post.id}`,
+  }))
 }
 
 function buildSearchContext(question, previousQuestion = '', previousResults = []) {
@@ -161,6 +153,7 @@ export async function askOpenAI(messages) {
         '반드시 제공된 검색 결과와 커뮤니티 게시글 컨텍스트에 근거해서만 답하세요.',
         '추측은 금지하고, 데이터에 없는 내용은 없다고 명확히 말하세요.',
         '장소를 안내할 때 장소명, 유형, 주소를 포함하고 distanceKm가 있으면 거리도 표시하세요.',
+        '게시글 결과가 있으면 제목, 작성자, 작성일과 내용을 요약하되 제공되지 않은 게시글을 만들지 마세요.',
         'limitations에 적힌 한계는 필요한 경우 사용자에게 분명히 안내하세요.',
         '검색 결과가 없으면 임의의 장소를 만들지 말고 지역명이나 유형을 구체적으로 물어보세요.',
         '답변은 간결하게 작성하고, 여러 장소는 읽기 쉬운 항목으로 정리하세요.',
@@ -183,5 +176,15 @@ export async function askOpenAI(messages) {
     throw new Error(detail || `AI 응답을 불러오지 못했습니다. (${response.status})`)
   }
   const data = await response.json()
-  return extractOpenAIText(data) || '응답 내용이 없습니다.'
+  return {
+    content: extractOpenAIText(data) || '응답 내용이 없습니다.',
+    links: context.posts.length
+      ? context.posts.map((post) => ({
+          label: post.title,
+          to: { name: 'board-detail', params: { id: post.id } },
+        }))
+      : context.plan.intent === 'community'
+        ? [{ label: '게시판 전체 보기', to: { name: 'board-list' } }]
+        : [],
+  }
 }

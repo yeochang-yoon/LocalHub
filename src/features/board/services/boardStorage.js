@@ -101,6 +101,38 @@ export function searchPosts(query) {
   })
 }
 
+export function searchPostsForChat(tokens = [], limit = 4) {
+  const searchTokens = tokens
+    .map((token) => String(token).trim().toLowerCase())
+    .filter(Boolean)
+
+  return getStorage()
+    .map((post) => {
+      const title = String(post.title || '').toLowerCase()
+      const content = String(post.content || '').toLowerCase()
+      const author = String(post.author || '').toLowerCase()
+      const score = searchTokens.reduce((total, token) => {
+        if (title.includes(token)) return total + 5
+        if (content.includes(token)) return total + 3
+        if (author.includes(token)) return total + 2
+        return total
+      }, 0)
+      return { post, score }
+    })
+    .filter(({ score }) => !searchTokens.length || score > 0)
+    .sort((left, right) => right.score - left.score || Number(right.post.id) - Number(left.post.id))
+    .slice(0, limit)
+    .map(({ post }) => ({
+      id: post.id,
+      title: post.title,
+      author: post.author,
+      content: post.content,
+      createdAt: post.createdAt,
+      views: post.views || 0,
+      likes: post.likes || 0,
+    }))
+}
+
 export function incrementViews(id) {
   const posts = getStorage()
   const nextPosts = posts.map((post) => {

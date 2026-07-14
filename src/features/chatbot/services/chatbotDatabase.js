@@ -107,6 +107,15 @@ function executeRows(db, sql, params = []) {
   }
 }
 
+function getInitializedDatabase() {
+  if (!database) throw new Error('챗봇 데이터베이스가 아직 초기화되지 않았습니다.')
+  return database
+}
+
+export function queryDatabase(sql, params = []) {
+  return executeRows(getInitializedDatabase(), sql, params)
+}
+
 function insertDataset(db, source, statements) {
   statements.contentType.run([source.contentTypeId, source.contentType])
   statements.region.run(['BSG', source.region || '부산'])
@@ -187,9 +196,7 @@ export function initializeChatbotDatabase() {
 }
 
 export function getChatbotPlaces() {
-  if (!database) throw new Error('챗봇 데이터베이스가 아직 초기화되지 않았습니다.')
-
-  return executeRows(database, `
+  return queryChatbotDatabase(`
     SELECT
       p.id,
       ct.name AS type,
@@ -214,7 +221,7 @@ export function getChatbotPlaces() {
 
 export function getChatbotDatabaseStats() {
   if (!database) return null
-  const [row] = executeRows(database, `
+  const [row] = queryChatbotDatabase(`
     SELECT
       (SELECT COUNT(*) FROM content_types) AS contentTypes,
       (SELECT COUNT(*) FROM places) AS places,

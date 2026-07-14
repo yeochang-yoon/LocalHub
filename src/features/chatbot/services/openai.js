@@ -1,43 +1,27 @@
-import touristData from '../../../../data/부산_관광지.json'
-import cultureData from '../../../../data/부산_문화시설.json'
-import festivalData from '../../../../data/부산_축제공연행사.json'
-import courseData from '../../../../data/부산_여행코스.json'
-import leisureData from '../../../../data/부산_레포츠.json'
-import stayData from '../../../../data/부산_숙박.json'
-import shoppingData from '../../../../data/부산_쇼핑.json'
 import { searchPostsForChat } from '../../board/services/boardStorage'
 import { extractOpenAIText } from './openaiResponse'
-import { analyzeQuery, CATEGORY_ALIASES, distanceKm, extractDistrict, normalizeText } from './queryPlanner'
-
-const DATASETS = [
-  { name: '관광지', data: touristData.items },
-  { name: '문화시설', data: cultureData.items },
-  { name: '축제공연행사', data: festivalData.items },
-  { name: '여행코스', data: courseData.items },
-  { name: '레포츠', data: leisureData.items },
-  { name: '숙박', data: stayData.items },
-  { name: '쇼핑', data: shoppingData.items },
-]
+import { getChatbotPlaces } from './chatbotDatabase'
+import { analyzeQuery, distanceKm, extractDistrict, normalizeText } from './queryPlanner'
 
 const RESTAURANT_KEYWORDS = ['음식점', '맛집', '식당', '모범음식점', '식사']
-const PLACE_INDEX = DATASETS.flatMap((dataset) =>
-  dataset.data.map((item) => ({
-    id: item.contentid,
-    type: dataset.name,
+function getPlaceIndex() {
+  return getChatbotPlaces().map((item) => ({
+    id: item.id,
+    type: item.type,
     title: item.title,
-    address: [item.addr1, item.addr2].filter(Boolean).join(' ').trim(),
-    district: extractDistrict(item.addr1),
-    tel: item.tel || '',
-    image: item.firstimage || '',
-    lat: Number.parseFloat(item.mapy),
-    lng: Number.parseFloat(item.mapx),
-    categories: [item.cat1, item.cat2, item.cat3].filter(Boolean),
-  })),
-)
+    address: [item.address1, item.address2].filter(Boolean).join(' ').trim(),
+    district: extractDistrict(item.address1),
+    tel: item.tel,
+    image: item.image,
+    lat: Number(item.lat),
+    lng: Number(item.lng),
+    categories: item.category_codes ? item.category_codes.split(',') : [],
+  }))
+}
 
 function findAnchor(question, previousResults = []) {
   const normalizedQuestion = normalizeText(question)
-  const direct = PLACE_INDEX
+  const direct = getPlaceIndex()
     .filter((place) => normalizeText(place.title).length >= 3 && normalizedQuestion.includes(normalizeText(place.title)))
     .sort((left, right) => right.title.length - left.title.length)[0]
   if (direct) return direct
@@ -70,7 +54,7 @@ function searchPlaces(plan, previousResults = []) {
   const categoryFilter = plan.categories.length ? plan.categories : null
   const districtFilter = plan.district && !anchor ? plan.district : null
 
-  const ranked = PLACE_INDEX
+  const ranked = getPlaceIndex()
     .filter((place) => !categoryFilter || categoryFilter.includes(place.type))
     .filter((place) => !districtFilter || place.district === districtFilter)
     .map((place) => ({

@@ -1,13 +1,7 @@
 <script setup>
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { regionCategories } from '../data/regionCategories'
-import tourismData from '../../../../data/부산_관광지.json'
-import leisureData from '../../../../data/부산_레포츠.json'
-import cultureData from '../../../../data/부산_문화시설.json'
-import shoppingData from '../../../../data/부산_쇼핑.json'
-import lodgingData from '../../../../data/부산_숙박.json'
-import courseData from '../../../../data/부산_여행코스.json'
-import festivalData from '../../../../data/부산_축제공연행사.json'
+import { getChatbotPlacesByContentType, getRegionCategorySummaries } from '../../chatbot/services/chatbotDatabase'
 
 const query = ref('')
 const selectedCategory = ref('관광지')
@@ -23,44 +17,15 @@ let isRendering = false
 let resizeObserver = null
 let canvasRenderer = null
 
-const categoryDataMap = {
-  관광지: tourismData,
-  레포츠: leisureData,
-  문화시설: cultureData,
-  쇼핑: shoppingData,
-  숙박: lodgingData,
-  여행코스: courseData,
-  '축제·공연': festivalData,
-  축제공연행사: festivalData,
-}
+const regionCategoryList = ref(regionCategories.map((item) => ({ ...item, count: 0 })))
+const activeItems = ref([])
 
 const filteredCategories = computed(() => {
   const search = query.value.trim()
-  return regionCategories.filter(
-    (item) =>
-      Object.keys(categoryDataMap).includes(item.name) &&
-      item.name.includes(search)
-  )
-})
-
-const activeItems = computed(() => {
-  const source = categoryDataMap[selectedCategory.value]
-  return source?.items || []
+  return regionCategoryList.value.filter((item) => item.name.includes(search))
 })
 
 const selectedId = ref('')
-
-watch(
-  activeItems,
-  (items) => {
-    if (!items.length) return
-    if (!items.some((item) => item.contentid === selectedId.value)) {
-      selectedId.value = items[0].contentid
-    }
-  },
-  { immediate: true }
-)
-
 const selectedItem = computed(() => {
   return (
     activeItems.value.find((item) => item.contentid === selectedId.value) ||
@@ -69,7 +34,6 @@ const selectedItem = computed(() => {
   )
 })
 
-// 줌 레벨 → 마커 반지름(px)
 const MIN_RADIUS = 4
 const MAX_RADIUS = 11
 
@@ -91,10 +55,6 @@ const markerStyle = (isSelected, zoom) => {
   }
 }
 
-/**
- * 줌이 끝난 뒤 반지름/색상만 갱신.
- * canvas 렌더러라 DOM 재생성이 없어 수백~수천 개여도 프레임 드랍이 없다.
- */
 const refreshMarkerSizes = () => {
   if (!mapInstance.value) return
   const zoom = mapInstance.value.getZoom()
@@ -104,10 +64,6 @@ const refreshMarkerSizes = () => {
   })
 }
 
-/**
- * 카테고리(=마커 목록)가 바뀔 때만 호출.
- * 마커를 새로 그리고, 이때만 fitBounds로 화면을 맞춘다.
- */
 const renderMarkers = () => {
   if (!mapInstance.value || !markerLayer.value || typeof window === 'undefined' || !window.L) return
 
@@ -122,14 +78,13 @@ const renderMarkers = () => {
       [Number(item.mapy), Number(item.mapx)],
       {
         ...markerStyle(item.contentid === selectedItem.value?.contentid, zoom),
-        renderer: canvasRenderer, // canvas에 그리므로 마커당 DOM 노드가 생기지 않는다
+        renderer: canvasRenderer,
         interactive: true,
         bubblingMouseEvents: false,
       }
     )
 
     marker.on('click', () => {
-      // 시점 변경 없이 선택 상태만 변경
       selectedId.value = item.contentid
     })
 
@@ -143,8 +98,6 @@ const renderMarkers = () => {
   })
 
   markers.forEach((marker) => markerLayer.value.addLayer(marker))
-
-  // 이전 카테고리에서 열려 있던 팝업 정리
   mapInstance.value.closePopup()
 
   if (markers.length) {
@@ -153,15 +106,9 @@ const renderMarkers = () => {
   }
 
   isRendering = false
-
-  // fitBounds로 줌이 바뀐 경우를 대비해 크기 동기화
   refreshMarkerSizes()
 }
 
-/**
- * 선택이 바뀔 때는 마커를 다시 만들지 않고 아이콘만 교체.
- * 줌 레벨은 그대로 두고, 선택한 마커로만 부드럽게 팬(pan)한다.
- */
 const updateSelectedMarkerStyle = (newId, oldId) => {
   if (!mapInstance.value) return
   const zoom = mapInstance.value.getZoom()
@@ -175,10 +122,8 @@ const updateSelectedMarkerStyle = (newId, oldId) => {
   newMarker.setStyle(markerStyle(true, zoom))
   newMarker.bringToFront()
 
-  // 카테고리 전환으로 인한 자동 선택일 때는 이동시키지 않는다(fitBounds가 이미 처리).
   if (isRendering) return
 
-  // 줌 레벨 유지 + 부드러운 이동
   mapInstance.value.panTo(newMarker.getLatLng(), {
     animate: true,
     duration: 0.45,
@@ -186,18 +131,43 @@ const updateSelectedMarkerStyle = (newId, oldId) => {
   })
 }
 
-// 마커 목록(=카테고리) 자체가 바뀔 때만 재렌더링 + fitBounds.
-// flush: 'post' → selectedId 리셋 등 다른 watch가 모두 끝난 뒤에 실행되므로
-// 새 카테고리의 선택 상태가 정확히 반영된 채로 마커가 그려진다.
+function loadItemsByCategory(name) {
+  const category = regionCategoryList.value.find((item) => item.name === name)
+  if (!category) {
+    activeItems.value = []
+    renderMarkers()
+    return
+  }
+
+  activeItems.value = getChatbotPlacesByContentType(category.contentTypeId)
+  renderMarkers()
+}
+
+function loadCategoryCounts() {
+  const summaries = getRegionCategorySummaries()
+  regionCategoryList.value = regionCategories.map((item) => ({
+    ...item,
+    count: summaries.find((summary) => summary.name === item.name)?.count ?? 0,
+  }))
+}
+
 watch(
   activeItems,
-  () => {
+  (items) => {
+    if (!items.length) {
+      renderMarkers()
+      return
+    }
+
+    if (!items.some((item) => item.contentid === selectedId.value)) {
+      selectedId.value = items[0].contentid
+    }
+
     renderMarkers()
   },
-  { flush: 'post' }
+  { immediate: true, flush: 'post' }
 )
 
-// 선택만 바뀔 때는 아이콘 색상만 교체 (지도 시점 그대로 유지)
 watch(
   () => selectedItem.value?.contentid,
   (newId, oldId) => {
@@ -205,6 +175,10 @@ watch(
   },
   { flush: 'post' }
 )
+
+watch(selectedCategory, () => {
+  loadItemsByCategory(selectedCategory.value)
+})
 
 const selectCategory = (name) => {
   if (selectedCategory.value === name) return
@@ -227,19 +201,17 @@ onMounted(() => {
     attribution: '&copy; OpenStreetMap contributors',
   }).addTo(mapInstance.value)
 
-  // 마커를 DOM이 아닌 단일 canvas에 그린다 → 줌/팬 시 렉 제거
   canvasRenderer = window.L.canvas({ padding: 0.5 })
 
   markerLayer.value = window.L.layerGroup()
   markerLayer.value.addTo(mapInstance.value)
 
-  // 줌이 끝날 때마다 아이콘 크기 재계산 (줌 중에는 건드리지 않아 어긋남 없음)
   mapInstance.value.on('zoomend', refreshMarkerSizes)
 
+  loadCategoryCounts()
+  loadItemsByCategory(selectedCategory.value)
   renderMarkers()
 
-  // 컨테이너 크기가 초기화 이후에 바뀌면 Leaflet 내부 좌표계가 어긋나
-  // 줌할 때 마커가 타일과 따로 노는 현상이 생긴다 → invalidateSize로 재계산
   nextTick(() => mapInstance.value?.invalidateSize())
 
   if (typeof ResizeObserver !== 'undefined') {
@@ -328,9 +300,6 @@ onBeforeUnmount(() => {
 </template>
 
 <style>
-/* Leaflet의 줌 애니메이션은 .leaflet-zoom-animated의 CSS transform 전환에 의존한다.
-   전역 CSS(* { transition: ... })가 이를 덮으면 줌이 끊겨 보이므로,
-   Leaflet 내부 요소는 전역 전환 효과에서 제외하되 Leaflet 자체 애니메이션은 살려 둔다. */
 .leaflet-container * {
   transition: none;
 }

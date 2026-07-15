@@ -230,3 +230,44 @@ export function getChatbotDatabaseStats() {
   `)
   return row
 }
+
+export function getRegionCategorySummaries() {
+  return queryDatabase(`
+    SELECT
+      ct.id AS contentTypeId,
+      ct.name AS name,
+      COUNT(p.id) AS count
+    FROM content_types ct
+    LEFT JOIN places p ON p.content_type_id = ct.id
+    WHERE ct.id IN ('12','14','15','25','28','32','38')
+    GROUP BY ct.id
+  `)
+}
+
+export function getChatbotPlacesByContentType(contentTypeId) {
+  return queryDatabase(`
+    SELECT
+      p.id AS contentid,
+      p.content_type_id AS contenttypeid,
+      p.title,
+      COALESCE(a.address1, '') AS addr1,
+      COALESCE(a.address2, '') AS addr2,
+      COALESCE(a.zipcode, '') AS zipcode,
+      COALESCE(c.telephone, '') AS tel,
+      COALESCE(i1.url, '') AS firstimage,
+      COALESCE(i2.url, '') AS firstimage2,
+      COALESCE(co.longitude, '') AS mapx,
+      COALESCE(co.latitude, '') AS mapy,
+      p.legal_region_code AS lDongRegnCd,
+      p.legal_district_code AS lDongSignguCd,
+      p.created_at AS createdtime,
+      p.modified_at AS modifiedtime
+    FROM places p
+    LEFT JOIN place_addresses a ON a.place_id = p.id
+    LEFT JOIN place_contacts c ON c.place_id = p.id
+    LEFT JOIN place_coordinates co ON co.place_id = p.id
+    LEFT JOIN place_images i1 ON i1.place_id = p.id AND i1.kind = 'original'
+    LEFT JOIN place_images i2 ON i2.place_id = p.id AND i2.kind = 'thumbnail'
+    WHERE p.content_type_id = ?
+  `, [String(contentTypeId)])
+}

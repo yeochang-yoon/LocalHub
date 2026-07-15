@@ -9,6 +9,7 @@ import {
 } from '../services/boardStorage'
 import { DEFAULT_POST_CATEGORY, POST_CATEGORIES } from '../data/boardOptions.js'
 import PlacePickerPanel from '../components/PlacePickerPanel.vue'
+import BoardImageUploader from '../components/BoardImageUploader.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -22,6 +23,7 @@ function createEmptyForm() {
     password: '',
     postCategory: DEFAULT_POST_CATEGORY,
     place: null,
+    image: null,
   }
 }
 
@@ -47,6 +49,7 @@ function loadForm() {
       password: '',
       postCategory: post.postCategory,
       place: post.place,
+      image: post.image,
     }
   } else {
     currentPost.value = null
@@ -84,6 +87,7 @@ function submitForm() {
       content: form.value.content,
       postCategory: form.value.postCategory,
       place: form.value.place,
+      image: form.value.image,
     })
     router.push({ name: 'board-detail', params: { id: currentPost.value.id } })
     return
@@ -101,6 +105,7 @@ function submitForm() {
     password: form.value.password,
     postCategory: form.value.postCategory,
     place: form.value.place,
+    image: form.value.image,
   })
   router.push({ name: 'board-list' })
 }
@@ -184,6 +189,7 @@ function clearPlace() {
         내용
         <textarea v-model="form.content" class="board-control" required rows="6" placeholder="이야기를 들려주세요"></textarea>
       </label>
+      <BoardImageUploader :image="form.image" @change="form.image = $event" />
       <label class="board-field">
         비밀번호
         <input

@@ -1,11 +1,27 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { getBusanFestivalCalendarItems } from '../services/api/calendarApi'
+
+const route = useRoute()
+const router = useRouter()
 
 const loading = ref(false)
 const loadError = ref('')
 const festivals = ref([])
-const currentMonth = ref(new Date(new Date().getFullYear(), new Date().getMonth(), 1))
+
+function getInitialMonth() {
+  const year = Number(route.query.year)
+  const month = Number(route.query.month)
+
+  if (Number.isInteger(year) && Number.isInteger(month) && month >= 1 && month <= 12) {
+    return new Date(year, month - 1, 1)
+  }
+
+  return new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+}
+
+const currentMonth = ref(getInitialMonth())
 
 const monthFormatter = new Intl.DateTimeFormat('ko-KR', {
   year: 'numeric',
@@ -124,8 +140,20 @@ const calendarCells = computed(() => {
   return cells
 })
 
+function syncCalendarRoute(targetMonth) {
+  const nextQuery = {
+    ...route.query,
+    year: String(targetMonth.getFullYear()),
+    month: String(targetMonth.getMonth() + 1),
+  }
+
+  router.replace({ name: 'calendar', query: nextQuery })
+}
+
 function moveMonth(offset) {
-  currentMonth.value = new Date(currentMonth.value.getFullYear(), currentMonth.value.getMonth() + offset, 1)
+  const nextMonth = new Date(currentMonth.value.getFullYear(), currentMonth.value.getMonth() + offset, 1)
+  currentMonth.value = nextMonth
+  syncCalendarRoute(nextMonth)
 }
 
 function loadFestivals() {
@@ -142,7 +170,30 @@ function loadFestivals() {
   }
 }
 
-onMounted(loadFestivals)
+watch(
+  () => [route.query.year, route.query.month],
+  ([yearText, monthText]) => {
+    const year = Number(yearText)
+    const month = Number(monthText)
+
+    if (Number.isInteger(year) && Number.isInteger(month) && month >= 1 && month <= 12) {
+      const nextMonth = new Date(year, month - 1, 1)
+      const sameMonth =
+        nextMonth.getFullYear() === currentMonth.value.getFullYear() &&
+        nextMonth.getMonth() === currentMonth.value.getMonth()
+
+      if (!sameMonth) {
+        currentMonth.value = nextMonth
+      }
+    }
+  },
+  { immediate: true }
+)
+
+onMounted(() => {
+  loadFestivals()
+  syncCalendarRoute(currentMonth.value)
+})
 </script>
 
 <template>
@@ -181,7 +232,11 @@ onMounted(loadFestivals)
                 :to="{
                   name: 'region-detail',
                   params: { contentId: festival.contentId },
-                  query: { from: 'calendar' },
+                  query: {
+                    from: 'calendar',
+                    year: currentMonth.getFullYear(),
+                    month: currentMonth.getMonth() + 1,
+                  },
                 }"
               >
                 <span class="festival-chip-label">{{ festival.title }}</span>

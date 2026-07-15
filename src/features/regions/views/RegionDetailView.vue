@@ -146,14 +146,12 @@ function toggleSharePopup() {
 }
 
 function goBackToCalendar() {
-  router.push({
-    name: 'calendar',
-    query: {
-      from: 'calendar',
-      year: String(route.query.year || new Date().getFullYear()),
-      month: String(route.query.month || new Date().getMonth() + 1),
-    },
-  })
+  const query = {}
+
+  if (route.query.year) query.year = route.query.year
+  if (route.query.month) query.month = route.query.month
+
+  router.push({ name: 'calendar', query })
 }
 
 function openSocialShare(platform) {

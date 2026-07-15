@@ -11,6 +11,7 @@
         <RouterLink to="/regions">권역정보</RouterLink>
         <RouterLink to="/dashboard">대시보드</RouterLink>
         <RouterLink to="/calendar">캘린더</RouterLink>
+        <RouterLink to="/trip-planner">여행추천</RouterLink>
       </nav>
     </div>
   </header>

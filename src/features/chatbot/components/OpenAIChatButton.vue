@@ -25,6 +25,8 @@ const input = ref('')
 const loading = ref(false)
 const messages = ref([welcomeMessage])
 const messageArea = ref(null)
+const isClearConfirmationVisible = ref(false)
+const activeRequestController = ref(null)
 
 function createMessageId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
@@ -58,6 +60,25 @@ async function scrollToBottom() {
   area.scrollTo({ top: area.scrollHeight, behavior: 'smooth' })
 }
 
+async function scrollToTop() {
+  await nextTick()
+  const area = messageArea.value
+  if (!area) return
+  area.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+function requestClearMessages() {
+  if (!isClearConfirmationVisible.value) {
+    isClearConfirmationVisible.value = true
+    return
+  }
+
+  messages.value = [{ ...welcomeMessage, id: createMessageId() }]
+  input.value = ''
+  isClearConfirmationVisible.value = false
+  scrollToBottom()
+}
+
 async function sendMessage(text = input.value) {
   const content = text.trim()
   if (!content || loading.value) return
@@ -67,17 +88,32 @@ async function sendMessage(text = input.value) {
   isOpen.value = true
   messages.value = [...messages.value, createMessage('user', content)].slice(-MAX_MESSAGES)
   loading.value = true
+  const controller = new AbortController()
+  activeRequestController.value = controller
   await scrollToBottom()
 
   try {
-    const reply = await askOpenAI(messages.value.map(({ role, content }) => ({ role, content })))
+    const reply = await askOpenAI(
+      messages.value.map(({ role, content }) => ({ role, content })),
+      { signal: controller.signal },
+    )
     messages.value = [...messages.value, createMessage('assistant', reply.content, reply.links)].slice(-MAX_MESSAGES)
   } catch (error) {
-    messages.value = [...messages.value, createMessage('assistant', error?.message || '답변을 가져오지 못했습니다.')].slice(-MAX_MESSAGES)
+    const message = error?.name === 'AbortError'
+      ? '답변 생성을 중지했습니다.'
+      : error?.message || '답변을 가져오지 못했습니다.'
+    messages.value = [...messages.value, createMessage('assistant', message)].slice(-MAX_MESSAGES)
   } finally {
-    loading.value = false
+    if (activeRequestController.value === controller) {
+      activeRequestController.value = null
+      loading.value = false
+    }
     await scrollToBottom()
   }
+}
+
+function stopResponse() {
+  activeRequestController.value?.abort()
 }
 
 function useQuickPrompt(prompt) {
@@ -87,10 +123,18 @@ function useQuickPrompt(prompt) {
 
 function closePanel() {
   isOpen.value = false
+  isClearConfirmationVisible.value = false
 }
 
-onMounted(loadState)
+onMounted(async () => {
+  loadState()
+  if (isOpen.value) await scrollToBottom()
+})
 watch([messages, isOpen], persistState, { deep: true })
+watch(isOpen, async (open) => {
+  if (open) await scrollToBottom()
+  else isClearConfirmationVisible.value = false
+})
 </script>
 
 <template>
@@ -113,6 +157,24 @@ watch([messages, isOpen], persistState, { deep: true })
       </button>
     </div>
 
+    <div class="chat-log-toolbar" aria-label="채팅 기록 관리">
+      <span>대화 {{ messages.length }}개</span>
+      <div>
+        <button type="button" title="가장 오래된 대화로 이동" @click="scrollToTop">처음</button>
+        <button type="button" title="가장 최근 대화로 이동" @click="scrollToBottom">최신</button>
+        <button
+          class="chat-clear-button"
+          :class="{ confirming: isClearConfirmationVisible }"
+          type="button"
+          :disabled="loading"
+          @click="requestClearMessages"
+          @blur="isClearConfirmationVisible = false"
+        >
+          {{ isClearConfirmationVisible ? '삭제 확인' : '전체 삭제' }}
+        </button>
+      </div>
+    </div>
+
     <div ref="messageArea" class="chat-messages" aria-live="polite">
       <article v-for="message in messages" :key="message.id" :class="['chat-message', message.role]">
         <span class="chat-role">{{ message.role === 'assistant' ? 'AI' : '나' }}</span>
@@ -128,7 +190,8 @@ watch([messages, isOpen], persistState, { deep: true })
 
     <form class="chat-form" @submit.prevent="sendMessage()">
       <input v-model="input" aria-label="메시지" placeholder="예: 해운대 관광지 추천해줘" />
-      <button type="submit" :disabled="loading || !input.trim()" aria-label="전송">↑</button>
+      <button v-if="loading" class="chat-stop-button" type="button" aria-label="답변 생성 중지" @click="stopResponse">■</button>
+      <button v-else type="submit" :disabled="!input.trim()" aria-label="전송">↑</button>
     </form>
     <small class="chat-source">출처: 한국관광공사 TourAPI 4.0 · 공공누리 제3유형</small>
   </aside>

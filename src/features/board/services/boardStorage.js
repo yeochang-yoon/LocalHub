@@ -1,24 +1,7 @@
 import { DEFAULT_POST_CATEGORY, POST_CATEGORIES } from '../data/boardOptions.js'
+import { boardSeedPosts } from '../data/boardSeedPosts.js'
 
 const STORAGE_KEY = 'localhub-board-posts'
-
-const seedPosts = [
-  {
-    id: 1,
-    title: 'LocalHub 게시판에 오신 것을 환영합니다',
-    author: '운영자',
-    content: '부산의 유용한 소식과 경험을 함께 나눠주세요.',
-    createdAt: '2026-07-14',
-    password: 'admin',
-    postCategory: DEFAULT_POST_CATEGORY,
-    place: null,
-    likes: 0,
-    bookmarked: false,
-    bookmarkCount: 0,
-    views: 0,
-    updatedAt: null,
-  },
-]
 
 function normalizeString(value) {
   return String(value ?? '')
@@ -92,10 +75,14 @@ export function normalizePost(post) {
 function getStorage() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY))
-    const posts = Array.isArray(saved) ? saved : seedPosts
+    const hasLegacyWelcomePost = Array.isArray(saved)
+      && saved.length === 1
+      && String(saved[0]?.id) === '1'
+      && saved[0]?.title === 'LocalHub 게시판에 오신 것을 환영합니다'
+    const posts = Array.isArray(saved) && !hasLegacyWelcomePost ? saved : boardSeedPosts
     return posts.map(normalizePost)
   } catch {
-    return seedPosts.map(normalizePost)
+    return boardSeedPosts.map(normalizePost)
   }
 }
 

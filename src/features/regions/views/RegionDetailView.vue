@@ -1,12 +1,13 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { queryDatabase } from '@/features/chatbot/services/chatbotDatabase'
 import { getPostsByContentId } from '@/features/board/services/boardStorage'
 import { formatPostDate } from '@/features/board/utils/boardDate'
 import { regionCategories } from '../data/regionCategories'
 
 const route = useRoute()
+const router = useRouter()
 
 const mapContainer = ref(null)
 const mapInstance = ref(null)
@@ -22,6 +23,7 @@ const isSharePopupOpen = ref(false)
 const relatedPosts = ref([])
 
 const contentId = computed(() => String(route.params.contentId ?? '').trim())
+const shouldShowCalendarBackButton = computed(() => route.query.from === 'calendar')
 const heroTitle = computed(() => content.value?.contentType || '권역상세')
 const categoryDescriptionMap = regionCategories.reduce((accumulator, item) => {
   accumulator[item.name] = item.description
@@ -141,6 +143,17 @@ function syncCurrentPageUrl() {
 
 function toggleSharePopup() {
   isSharePopupOpen.value = !isSharePopupOpen.value
+}
+
+function goBackToCalendar() {
+  router.push({
+    name: 'calendar',
+    query: {
+      from: 'calendar',
+      year: String(route.query.year || new Date().getFullYear()),
+      month: String(route.query.month || new Date().getMonth() + 1),
+    },
+  })
 }
 
 function openSocialShare(platform) {
@@ -291,15 +304,25 @@ onBeforeUnmount(() => {
         </ul>
 
         <div class="detail-share">
-          <button
-            class="button board-button board-button--secondary"
-            type="button"
-            :aria-expanded="isSharePopupOpen"
-            aria-haspopup="menu"
-            @click="toggleSharePopup"
-          >
-            공유하기
-          </button>
+          <div class="detail-actions">
+            <button
+              v-if="shouldShowCalendarBackButton"
+              class="button board-button board-button--outline"
+              type="button"
+              @click="goBackToCalendar"
+            >
+              캘린더로 돌아가기
+            </button>
+            <button
+              class="button board-button board-button--secondary"
+              type="button"
+              :aria-expanded="isSharePopupOpen"
+              aria-haspopup="menu"
+              @click="toggleSharePopup"
+            >
+              공유하기
+            </button>
+          </div>
           <Transition name="share-pop">
             <div v-if="isSharePopupOpen" class="share-popup board-subcard" role="menu" aria-label="공유 메뉴">
               <button class="button board-button board-button--outline share-popup-button" type="button" role="menuitem" @click="copyCurrentPageUrl">
@@ -446,6 +469,13 @@ onBeforeUnmount(() => {
 .detail-share {
   position: relative;
   margin-top: 14px;
+}
+
+.detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
 }
 
 .share-feedback {

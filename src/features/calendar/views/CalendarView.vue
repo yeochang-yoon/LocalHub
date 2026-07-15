@@ -178,7 +178,11 @@ onMounted(loadFestivals)
                 v-for="festival in cell.festivals"
                 :key="festival.contentId"
                 class="festival-chip"
-                :to="{ name: 'region-detail', params: { contentId: festival.contentId } }"
+                :to="{
+                  name: 'region-detail',
+                  params: { contentId: festival.contentId },
+                  query: { from: 'calendar' },
+                }"
               >
                 <span class="festival-chip-label">{{ festival.title }}</span>
                 <span class="festival-tooltip" role="tooltip">

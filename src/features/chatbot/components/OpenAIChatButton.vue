@@ -117,7 +117,7 @@ watch([messages, isOpen], persistState, { deep: true })
       <article v-for="message in messages" :key="message.id" :class="['chat-message', message.role]">
         <span class="chat-role">{{ message.role === 'assistant' ? 'AI' : '나' }}</span>
         <p>{{ message.content }}</p>
-        <nav v-if="message.links?.length" class="chat-links" aria-label="관련 게시글">
+        <nav v-if="message.links?.length" class="chat-links" aria-label="관련 링크">
           <RouterLink v-for="link in message.links" :key="`${message.id}-${link.label}`" :to="link.to" @click="closePanel">
             {{ link.label }}
           </RouterLink>

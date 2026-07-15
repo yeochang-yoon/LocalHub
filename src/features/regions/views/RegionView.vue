@@ -291,6 +291,13 @@ onBeforeUnmount(() => {
           <li><strong>주소</strong><span>{{ selectedItem.addr1 }}</span></li>
           <li><strong>좌표</strong><span>{{ selectedItem.mapy }}, {{ selectedItem.mapx }}</span></li>
         </ul>
+        <RouterLink
+          v-if="selectedItem"
+          class="button board-button board-button--secondary region-detail-link"
+          :to="{ name: 'region-detail', params: { contentId: selectedItem.contentid } }"
+        >
+          상세페이지 보기
+        </RouterLink>
       </aside>
     </div>
 
@@ -311,5 +318,9 @@ onBeforeUnmount(() => {
 
 .map-frame {
   min-height: 420px;
+}
+
+.region-detail-link {
+  margin-top: 14px;
 }
 </style>

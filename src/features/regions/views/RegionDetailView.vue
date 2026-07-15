@@ -6,6 +6,7 @@ import { getPostsByContentId } from '@/features/board/services/boardStorage'
 import { formatPostDate } from '@/features/board/utils/boardDate'
 import { getGooglePlaceDetails } from '../services/googlePlaceDetails'
 import { getRegionImagesByContentId } from '../services/regionImageIndex'
+import { regionCategories } from '../data/regionCategories'
 
 const route = useRoute()
 const router = useRouter()

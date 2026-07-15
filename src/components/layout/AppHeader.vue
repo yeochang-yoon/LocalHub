@@ -9,6 +9,7 @@
         <RouterLink to="/">홈</RouterLink>
         <RouterLink to="/board">게시판</RouterLink>
         <RouterLink to="/regions">권역정보</RouterLink>
+        <RouterLink to="/calendar">캘린더</RouterLink>
       </nav>
     </div>
   </header>

@@ -31,8 +31,8 @@ const markerLayer = ref(null)
 let resizeObserver = null
 
 const markerColors = {
-  12: '#2f855a', 14: '#805ad5', 15: '#dd6b20', 25: '#3182ce',
-  28: '#008b8b', 32: '#d53f8c', 38: '#9c6b16',
+  12: '#087fa7', 14: '#526fc5', 15: '#ff7052', 25: '#2ca9c2',
+  28: '#00a69a', 32: '#d7659b', 38: '#d49b31',
 }
 
 function parsePurposes(value) {
@@ -112,7 +112,7 @@ function renderMarkers() {
   for (const place of mappablePlaces.value) {
     const latLng = [Number(place.latitude), Number(place.longitude)]
     latLngs.push(latLng)
-    const color = markerColors[place.contentTypeId] || '#174f40'
+    const color = markerColors[place.contentTypeId] || '#087fa7'
     const marker = window.L.circleMarker(latLng, {
       radius: 6,
       color: '#fff',
@@ -177,7 +177,7 @@ onBeforeUnmount(() => {
   <section class="page-hero dashboard-hero">
     <div class="container">
       <p class="eyebrow">BUSAN TRAVEL GUIDE</p>
-      <h1>부산 여행 데이터 대시보드</h1>
+      <h1><span class="title-emoji" aria-hidden="true">📊</span> 부산 여행 데이터 대시보드</h1>
       <p>여행 목적에 맞는 지역과 주변 시설을 데이터로 비교해 보세요.</p>
     </div>
   </section>
@@ -186,7 +186,7 @@ onBeforeUnmount(() => {
     <header class="dashboard-heading">
       <div>
         <p class="eyebrow">TRAVEL MATCH</p>
-        <h2 id="dashboard-heading">나에게 맞는 부산 찾기</h2>
+        <h2 id="dashboard-heading">🎯 나에게 맞는 부산 찾기</h2>
       </div>
       <RouterLink class="button board-button board-button--outline" to="/regions">전체 시설 탐색</RouterLink>
     </header>
@@ -225,7 +225,7 @@ onBeforeUnmount(() => {
 
       <section class="dashboard-section" aria-labelledby="recommendation-title">
         <div class="section-title">
-          <div><p class="eyebrow">RECOMMENDED DISTRICTS</p><h2 id="recommendation-title">여행 조건과 잘 맞는 지역</h2></div>
+          <div><p class="eyebrow">RECOMMENDED DISTRICTS</p><h2 id="recommendation-title">🏆 여행 조건과 잘 맞는 지역</h2></div>
           <p>시설별 최대 분포를 기준으로 계산한 조건 일치도이며 인기 순위가 아닙니다.</p>
         </div>
         <div v-if="recommendations.length" class="recommendation-grid">

@@ -7,17 +7,17 @@ const PANEL_STORAGE_KEY = 'localhub-chat-panel-open'
 const MAX_MESSAGES = 24
 
 const quickPrompts = [
-  { label: '관광지 추천', prompt: '해운대 근처 관광지 3곳 추천해줘' },
-  { label: '축제 일정', prompt: '지금 열리는 부산 축제 알려줘' },
-  { label: '커뮤니티 검색', prompt: '게시글에서 광안리 후기 찾아줘' },
-  { label: '숙박 코스', prompt: '숙박과 여행코스를 같이 추천해줘' },
-  { label: '모범음식점', prompt: '모범음식점 위치 알려줘' },
+  { label: '📸 관광지 추천', prompt: '해운대 근처 관광지 3곳 추천해줘' },
+  { label: '🎉 축제 일정', prompt: '지금 열리는 부산 축제 알려줘' },
+  { label: '💬 커뮤니티 검색', prompt: '게시글에서 광안리 후기 찾아줘' },
+  { label: '🏨 숙박 코스', prompt: '숙박과 여행코스를 같이 추천해줘' },
+  { label: '🍽️ 모범음식점', prompt: '모범음식점 위치 알려줘' },
 ]
 
 const welcomeMessage = {
   id: createMessageId(),
   role: 'assistant',
-  content: '안녕하세요. 부산 관광지, 축제, 숙박, 쇼핑, 커뮤니티 게시글을 바로 찾아드릴게요.',
+  content: '안녕하세요! 🐳 부산 관광지, 축제, 숙박, 쇼핑, 커뮤니티 게시글을 신나게 찾아드릴게요. 🌊',
 }
 
 const isOpen = ref(false)
@@ -145,7 +145,7 @@ watch(isOpen, async (open) => {
   <aside v-if="isOpen" class="chat-panel" aria-label="AI 부산 도우미">
     <header class="chat-header">
       <div>
-        <strong>AI 부산 도우미</strong>
+        <strong>🐳 AI 부산 도우미</strong>
         <span>JSON 지역정보 · 커뮤니티 게시글 검색</span>
       </div>
       <button type="button" aria-label="채팅 닫기" @click="closePanel">×</button>
@@ -177,7 +177,7 @@ watch(isOpen, async (open) => {
 
     <div ref="messageArea" class="chat-messages" aria-live="polite">
       <article v-for="message in messages" :key="message.id" :class="['chat-message', message.role]">
-        <span class="chat-role">{{ message.role === 'assistant' ? 'AI' : '나' }}</span>
+        <span class="chat-role">{{ message.role === 'assistant' ? '🐳 AI' : '😊 나' }}</span>
         <p>{{ message.content }}</p>
         <nav v-if="message.links?.length" class="chat-links" aria-label="관련 링크">
           <RouterLink v-for="link in message.links" :key="`${message.id}-${link.label}`" :to="link.to" @click="closePanel">
@@ -197,6 +197,6 @@ watch(isOpen, async (open) => {
   </aside>
 
   <button data-chat-trigger class="chat-trigger" type="button" :aria-expanded="isOpen" aria-label="AI 챗봇 열기" @click="isOpen = !isOpen">
-    ✦<span>AI에게 물어보기</span>
+    🐳<span>AI에게 물어보기</span>
   </button>
 </template>

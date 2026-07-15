@@ -109,6 +109,7 @@ defineEmits(['like', 'bookmark'])
   color: #5d6862;
   line-height: 1.7;
   -webkit-box-orient: vertical;
+  line-clamp: 3;
   -webkit-line-clamp: 3;
 }
 

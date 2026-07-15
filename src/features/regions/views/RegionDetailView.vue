@@ -257,7 +257,7 @@ onBeforeUnmount(() => {
   <section class="page-hero">
     <div class="container">
       <p class="eyebrow">EXPLORE BUSAN</p>
-      <h1>{{ heroTitle }}</h1>
+      <h1><span class="title-emoji" aria-hidden="true">📍</span> {{ heroTitle }}</h1>
       <p>{{ heroDescription }}</p>
     </div>
   </section>

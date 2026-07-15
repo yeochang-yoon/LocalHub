@@ -131,7 +131,7 @@ function clearPlace() {
   <section class="page-hero">
     <div class="container">
       <p class="eyebrow">COMMUNITY</p>
-      <h1>{{ isEditMode ? '게시글 수정' : '새 글 작성' }}</h1>
+      <h1><span class="title-emoji" aria-hidden="true">✍️</span> {{ isEditMode ? '게시글 수정' : '새 글 작성' }}</h1>
       <p>{{ isEditMode ? '기존 게시글 내용을 수정할 수 있습니다.' : '부산 이웃들에게 전하고 싶은 이야기를 공유하세요.' }}</p>
     </div>
   </section>

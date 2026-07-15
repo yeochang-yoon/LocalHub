@@ -7,6 +7,7 @@ import courseData from '../../../../data/부산_여행코스.json'
 import leisureData from '../../../../data/부산_레포츠.json'
 import stayData from '../../../../data/부산_숙박.json'
 import shoppingData from '../../../../data/부산_쇼핑.json'
+import { extractBusanDistrict } from '../utils/busanDistrict.js'
 
 const SOURCES = [touristData, cultureData, festivalData, courseData, leisureData, stayData, shoppingData]
 
@@ -41,6 +42,7 @@ const SCHEMA = `
     district_code TEXT,
     legal_region_code TEXT,
     legal_district_code TEXT,
+    district_name TEXT,
     title TEXT NOT NULL,
     created_at TEXT,
     modified_at TEXT,
@@ -90,6 +92,7 @@ const SCHEMA = `
 
   CREATE INDEX idx_places_type ON places(content_type_id);
   CREATE INDEX idx_places_region ON places(region_code, district_code);
+  CREATE INDEX idx_places_district_name ON places(district_name);
   CREATE INDEX idx_places_title ON places(title);
   CREATE INDEX idx_addresses_address1 ON place_addresses(address1);
   CREATE INDEX idx_categories_code ON place_categories(code);
@@ -132,6 +135,7 @@ function insertDataset(db, source, statements) {
       item.sigungucode || null,
       item.lDongRegnCd || null,
       item.lDongSignguCd || null,
+      extractBusanDistrict(item.addr1),
       item.title,
       item.createdtime || null,
       item.modifiedtime || null,
@@ -160,7 +164,7 @@ function populateDatabase(db) {
     contentType: db.prepare('INSERT OR IGNORE INTO content_types (id, name) VALUES (?, ?)'),
     region: db.prepare('INSERT OR IGNORE INTO regions (code, name) VALUES (?, ?)'),
     district: db.prepare('INSERT OR IGNORE INTO districts (region_code, code, name) VALUES (?, ?, ?)'),
-    place: db.prepare('INSERT OR REPLACE INTO places VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'),
+    place: db.prepare('INSERT OR REPLACE INTO places VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'),
     address: db.prepare('INSERT OR REPLACE INTO place_addresses VALUES (?, ?, ?, ?)'),
     coordinate: db.prepare('INSERT OR REPLACE INTO place_coordinates VALUES (?, ?, ?, ?)'),
     contact: db.prepare('INSERT OR REPLACE INTO place_contacts VALUES (?, ?)'),

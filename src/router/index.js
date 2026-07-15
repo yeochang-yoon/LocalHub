@@ -43,6 +43,11 @@ const routes = [
     component: () => import('@/features/regions/views/RegionDetailView.vue'),
   },
   {
+    path: '/dashboard',
+    name: 'dashboard',
+    component: () => import('@/features/dashboard/views/DashboardView.vue'),
+  },
+  {
     path: '/calendar',
     name: 'calendar',
     component: () => import('@/features/calendar/views/CalendarView.vue'),

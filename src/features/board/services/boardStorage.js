@@ -92,6 +92,15 @@ export function loadPosts() {
   return getStorage()
 }
 
+export function getPostsByContentId(contentId) {
+  const normalizedContentId = normalizeString(contentId).trim()
+  if (!normalizedContentId) return []
+
+  return getStorage().filter(
+    (post) => normalizeString(post.place?.contentId).trim() === normalizedContentId,
+  )
+}
+
 export function getPostById(id) {
   const posts = getStorage()
   return posts.find((post) => String(post.id) === String(id)) || null

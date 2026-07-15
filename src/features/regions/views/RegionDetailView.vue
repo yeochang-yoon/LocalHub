@@ -2,6 +2,8 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { queryDatabase } from '@/features/chatbot/services/chatbotDatabase'
+import { getPostsByContentId } from '@/features/board/services/boardStorage'
+import { formatPostDate } from '@/features/board/utils/boardDate'
 import { regionCategories } from '../data/regionCategories'
 
 const route = useRoute()
@@ -17,6 +19,7 @@ const currentPageUrl = ref('')
 const shareFeedback = ref('')
 const isShareError = ref(false)
 const isSharePopupOpen = ref(false)
+const relatedPosts = ref([])
 
 const contentId = computed(() => String(route.params.contentId ?? '').trim())
 const heroTitle = computed(() => content.value?.contentType || '권역상세')
@@ -118,6 +121,14 @@ function loadContentDetail() {
   }
 }
 
+function loadRelatedPosts() {
+  relatedPosts.value = getPostsByContentId(contentId.value)
+}
+
+function handleStorageChange(event) {
+  if (!event.key || event.key === 'localhub-board-posts') loadRelatedPosts()
+}
+
 function setShareFeedbackMessage(message, isError = false) {
   shareFeedback.value = message
   isShareError.value = isError
@@ -210,11 +221,15 @@ function syncMap() {
   mapInstance.value.setView([lat, lng], 14, { animate: false })
 }
 
-watch(contentId, loadContentDetail, { immediate: true })
+watch(contentId, () => {
+  loadContentDetail()
+  loadRelatedPosts()
+}, { immediate: true })
 watch(content, syncMap)
 watch(() => route.fullPath, syncCurrentPageUrl, { immediate: true })
 
 onMounted(() => {
+  window.addEventListener('storage', handleStorageChange)
   if (!mapContainer.value || typeof window === 'undefined' || !window.L) return
 
   mapInstance.value = window.L.map(mapContainer.value, {
@@ -230,6 +245,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  if (typeof window !== 'undefined') window.removeEventListener('storage', handleStorageChange)
   if (mapInstance.value) {
     mapInstance.value.remove()
     mapInstance.value = null
@@ -323,8 +339,22 @@ onBeforeUnmount(() => {
     </div>
 
     <section v-if="content" class="related-posts-section board-subcard" aria-labelledby="related-posts-title">
-      <h3 id="related-posts-title">관련 게시글</h3>
-      <p>해당 콘텐츠 ID를 가진 게시글 조회는 추후 연동 예정입니다.</p>
+      <div class="related-posts-heading">
+        <h3 id="related-posts-title">관련 게시글</h3>
+        <span>{{ relatedPosts.length }}개</span>
+      </div>
+      <ul v-if="relatedPosts.length" class="related-posts-list">
+        <li v-for="post in relatedPosts" :key="post.id">
+          <RouterLink :to="{ name: 'board-detail', params: { id: post.id } }">
+            <span class="board-badge">{{ post.postCategory }}</span>
+            <strong>{{ post.title }}</strong>
+            <span class="related-post-meta">
+              {{ post.author || '작성자 미상' }} · {{ formatPostDate(post.createdAt) }}
+            </span>
+          </RouterLink>
+        </li>
+      </ul>
+      <p v-else>이 장소와 연결된 게시글이 없습니다.</p>
     </section>
   </section>
 </template>
@@ -348,9 +378,62 @@ onBeforeUnmount(() => {
 }
 
 .related-posts-section h3 {
-  margin: 0 0 8px;
+  margin: 0;
   color: var(--green);
   font-size: 16px;
+}
+
+.related-posts-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.related-posts-heading > span {
+  color: #6b756f;
+  font-size: 13px;
+}
+
+.related-posts-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.related-posts-list a {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  color: inherit;
+  border: 1px solid #dbe5dc;
+  border-radius: 8px;
+  background: white;
+  text-decoration: none;
+}
+
+.related-posts-list a:hover,
+.related-posts-list a:focus-visible {
+  border-color: var(--green);
+  background: var(--mint);
+}
+
+.related-posts-list strong {
+  overflow: hidden;
+  color: var(--green);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.related-post-meta {
+  color: #6b756f;
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 .related-posts-section p {
@@ -425,6 +508,16 @@ onBeforeUnmount(() => {
 @media (max-width: 980px) {
   .detail-layout {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .related-posts-list a {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .related-post-meta {
+    grid-column: 1 / -1;
   }
 }
 </style>

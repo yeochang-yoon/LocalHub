@@ -30,6 +30,7 @@ globalThis.localStorage = {
 const {
   createPost,
   getPostById,
+  getPostsByContentId,
   loadPosts,
   searchPostsForChat,
   updatePost,
@@ -85,6 +86,23 @@ assert.equal(createdPost.bookmarked, false)
 assert.equal(createdPost.bookmarkCount, 0)
 assert.equal(createdPost.updatedAt, null)
 assert.ok(Number.isFinite(Date.parse(createdPost.createdAt)))
+
+const linkedPost = createPost({
+  title: '장소 연결 게시글',
+  author: '테스터',
+  content: '특정 장소와 연결된 게시글',
+  password: 'place-secret',
+  postCategory: '?쇰컲',
+  place: {
+    contentId: 12345,
+    category: '문화시설',
+    name: '테스트 장소',
+    address: '부산광역시',
+  },
+})
+assert.deepEqual(getPostsByContentId('12345').map((post) => post.id), [linkedPost.id])
+assert.deepEqual(getPostsByContentId(' 12345 ').map((post) => post.id), [linkedPost.id])
+assert.deepEqual(getPostsByContentId(''), [])
 
 assert.notEqual(getPostTimestamp('2024-02-29'), null)
 assert.equal(getPostTimestamp('2024-02-30'), null)

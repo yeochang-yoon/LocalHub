@@ -196,7 +196,7 @@ export function initializeChatbotDatabase() {
 }
 
 export function getChatbotPlaces() {
-  return queryChatbotDatabase(`
+  return queryDatabase(`
     SELECT
       p.id,
       ct.name AS type,
@@ -221,7 +221,7 @@ export function getChatbotPlaces() {
 
 export function getChatbotDatabaseStats() {
   if (!database) return null
-  const [row] = queryChatbotDatabase(`
+  const [row] = queryDatabase(`
     SELECT
       (SELECT COUNT(*) FROM content_types) AS contentTypes,
       (SELECT COUNT(*) FROM places) AS places,

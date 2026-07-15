@@ -49,6 +49,21 @@ function normalizePlace(place) {
     : null
 }
 
+function normalizeImage(image) {
+  if (!image || typeof image !== 'object' || Array.isArray(image)) return null
+
+  const dataUrl = normalizeString(image.dataUrl)
+  if (!/^data:image\/(?:jpeg|png|webp);base64,/i.test(dataUrl)) return null
+
+  return {
+    dataUrl,
+    name: normalizeString(image.name),
+    type: normalizeString(image.type),
+    width: normalizeCount(image.width),
+    height: normalizeCount(image.height),
+  }
+}
+
 export function normalizePost(post) {
   const source = post && typeof post === 'object' && !Array.isArray(post) ? post : {}
   const bookmarked = normalizeBookmarked(source.bookmarked)
@@ -62,6 +77,7 @@ export function normalizePost(post) {
     password: normalizeString(source.password),
     postCategory: POST_CATEGORIES.includes(category) ? category : DEFAULT_POST_CATEGORY,
     place: normalizePlace(source.place),
+    image: normalizeImage(source.image),
     likes: normalizeCount(source.likes),
     bookmarked,
     bookmarkCount: bookmarked ? 1 : 0,
@@ -106,7 +122,7 @@ export function getPostById(id) {
   return posts.find((post) => String(post.id) === String(id)) || null
 }
 
-export function createPost({ title, author, content, password, postCategory, place }) {
+export function createPost({ title, author, content, password, postCategory, place, image }) {
   const posts = getStorage()
   const newPost = normalizePost({
     id: Date.now(),
@@ -116,6 +132,7 @@ export function createPost({ title, author, content, password, postCategory, pla
     password,
     postCategory,
     place,
+    image,
     likes: 0,
     bookmarked: false,
     bookmarkCount: 0,

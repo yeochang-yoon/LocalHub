@@ -44,6 +44,7 @@ assert.equal(legacyPost.author, '42')
 assert.equal(legacyPost.password, '1234')
 assert.equal(legacyPost.postCategory, '일반')
 assert.equal(legacyPost.place, null)
+assert.equal(legacyPost.image, null)
 assert.equal(legacyPost.likes, 0)
 assert.equal(legacyPost.views, 3)
 assert.equal(legacyPost.bookmarked, true)
@@ -58,6 +59,13 @@ updatePost({
   content: '수정 내용',
   postCategory: '후기',
   place: null,
+  image: {
+    dataUrl: 'data:image/jpeg;base64,dGVzdA==',
+    name: 'test.jpg',
+    type: 'image/jpeg',
+    width: 1200,
+    height: 800,
+  },
 })
 
 const updatedPost = getPostById(201)
@@ -65,6 +73,7 @@ assert.equal(updatedPost.password, '1234')
 assert.equal(updatedPost.createdAt, '2024-02-29')
 assert.equal(updatedPost.postCategory, '후기')
 assert.equal(updatedPost.place, null)
+assert.equal(updatedPost.image.name, 'test.jpg')
 assert.equal(updatedPost.likes, 0)
 assert.equal(updatedPost.views, 3)
 assert.equal(updatedPost.bookmarkCount, 1)
@@ -77,9 +86,18 @@ const createdPost = createPost({
   password: 'new-secret',
   postCategory: '잘못된 값',
   place: null,
+  image: {
+    dataUrl: 'data:image/jpeg;base64,dGVzdA==',
+    name: 'test.jpg',
+    type: 'image/jpeg',
+    width: 1200,
+    height: 800,
+  },
 })
 assert.equal(createdPost.postCategory, '일반')
 assert.equal(createdPost.place, null)
+assert.equal(createdPost.image.name, 'test.jpg')
+assert.equal(createdPost.image.width, 1200)
 assert.equal(createdPost.likes, 0)
 assert.equal(createdPost.views, 0)
 assert.equal(createdPost.bookmarked, false)

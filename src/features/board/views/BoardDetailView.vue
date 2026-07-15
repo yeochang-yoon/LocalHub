@@ -134,6 +134,12 @@ function handleBookmark() {
       </header>
 
       <section class="board-detail-content" aria-label="게시글 본문">
+        <img
+          v-if="post.image"
+          class="board-detail-image"
+          :src="post.image.dataUrl"
+          :alt="post.image.name || `${post.title} 첨부 사진`"
+        />
         <p>{{ post.content }}</p>
       </section>
 
@@ -269,6 +275,16 @@ function handleBookmark() {
   line-height: 1.9;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+.board-detail-image {
+  display: block;
+  width: 100%;
+  max-height: 720px;
+  margin-bottom: 28px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: #f2f4f1;
 }
 
 .board-detail-place {

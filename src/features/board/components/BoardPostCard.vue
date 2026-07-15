@@ -26,6 +26,15 @@ defineEmits(['like', 'bookmark'])
 
     <p class="board-post-excerpt">{{ post.content }}</p>
 
+    <RouterLink
+      v-if="post.image"
+      class="board-post-image"
+      :to="{ name: 'board-detail', params: { id: post.id } }"
+      :aria-label="`${post.title} 사진과 상세 내용 보기`"
+    >
+      <img :src="post.image.dataUrl" :alt="post.image.name || `${post.title} 첨부 사진`" loading="lazy" />
+    </RouterLink>
+
     <div v-if="post.place" class="board-post-place board-subcard">
       <span>{{ post.place.category }}</span>
       <strong>{{ post.place.name || '이름 없는 장소' }}</strong>
@@ -101,6 +110,20 @@ defineEmits(['like', 'bookmark'])
   line-height: 1.7;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
+}
+
+.board-post-image {
+  display: block;
+  overflow: hidden;
+  border-radius: 10px;
+  background: #eef2ed;
+}
+
+.board-post-image img {
+  display: block;
+  width: 100%;
+  max-height: 320px;
+  object-fit: cover;
 }
 
 .board-post-place {

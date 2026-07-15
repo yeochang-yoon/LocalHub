@@ -116,6 +116,25 @@ function buildSearchContext(question, previousQuestion = '', previousResults = [
   }
 }
 
+function buildChatLinks(context) {
+  const placeLinks = context.places.map((place) => ({
+    label: `${place.title} 상세`,
+    to: { name: 'region-detail', params: { contentId: place.id } },
+  }))
+
+  const postLinks = context.posts.map((post) => ({
+    label: post.title,
+    to: post.route,
+  }))
+
+  if (context.plan.intent === 'community') {
+    if (postLinks.length) return postLinks
+    return [{ label: '게시판 전체 보기', to: '/board' }]
+  }
+
+  return placeLinks
+}
+
 export async function askOpenAI(messages) {
   const apiKey = import.meta.env.VITE_OPENAI_API_KEY
   if (!apiKey) throw new Error('VITE_OPENAI_API_KEY가 설정되지 않았습니다.')
@@ -162,13 +181,6 @@ export async function askOpenAI(messages) {
   const data = await response.json()
   return {
     content: extractOpenAIText(data) || '응답 내용이 없습니다.',
-    links: context.posts.length
-      ? context.posts.map((post) => ({
-          label: post.title,
-          to: { name: 'board-detail', params: { id: post.id } },
-        }))
-      : context.plan.intent === 'community'
-        ? [{ label: '게시판 전체 보기', to: { name: 'board-list' } }]
-        : [],
+    links: buildChatLinks(context),
   }
 }

@@ -20,6 +20,9 @@ const searchTarget = ref('title')
 const query = ref('')
 const sortOrder = ref('latest')
 const selectedCategory = ref('전체')
+const pageSize = ref(10)
+const currentPage = ref(1)
+const pageSizeOptions = [10, 20, 30, 50]
 
 const isBookmarkPage = computed(() => props.showBookmarks)
 const hasActiveFilter = computed(() => {
@@ -92,6 +95,53 @@ const filteredPosts = computed(() => {
   return sortPosts(matches)
 })
 
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredPosts.value.length / pageSize.value)))
+const paginatedPosts = computed(() => {
+  const startIndex = (currentPage.value - 1) * pageSize.value
+  return filteredPosts.value.slice(startIndex, startIndex + pageSize.value)
+})
+const pageRangeStart = computed(() => {
+  if (!filteredPosts.value.length) return 0
+  return (currentPage.value - 1) * pageSize.value + 1
+})
+const pageRangeEnd = computed(() => {
+  return Math.min(currentPage.value * pageSize.value, filteredPosts.value.length)
+})
+const paginationItems = computed(() => {
+  if (totalPages.value <= 7) {
+    return Array.from({ length: totalPages.value }, (_, index) => index + 1)
+  }
+
+  const pages = [...new Set([
+    1,
+    currentPage.value - 1,
+    currentPage.value,
+    currentPage.value + 1,
+    totalPages.value,
+  ])]
+    .filter((page) => page >= 1 && page <= totalPages.value)
+    .sort((left, right) => left - right)
+
+  const items = []
+  pages.forEach((page, index) => {
+    const previousPage = pages[index - 1]
+    if (previousPage && page - previousPage > 1) items.push(`ellipsis-${previousPage}`)
+    items.push(page)
+  })
+  return items
+})
+
+watch(
+  [searchTarget, query, sortOrder, selectedCategory, pageSize, isBookmarkPage],
+  () => {
+    currentPage.value = 1
+  },
+)
+
+watch(totalPages, (pages) => {
+  if (currentPage.value > pages) currentPage.value = pages
+})
+
 const emptyStateMessage = computed(() => {
   if (filteredPosts.value.length) return ''
 
@@ -108,6 +158,10 @@ const emptyStateMessage = computed(() => {
 
 function refreshPosts() {
   posts.value = loadPosts()
+}
+
+function goToPage(page) {
+  currentPage.value = Math.min(Math.max(Number(page) || 1, 1), totalPages.value)
 }
 
 function goToCreate() {
@@ -180,9 +234,22 @@ function handleBookmark(postId) {
       v-model:category="selectedCategory"
     />
 
+    <div v-if="filteredPosts.length" class="board-page-options">
+      <p>
+        전체 {{ filteredPosts.length.toLocaleString() }}개 중
+        <strong>{{ pageRangeStart }}–{{ pageRangeEnd }}</strong>개 표시
+      </p>
+      <label class="board-page-size">
+        페이지당
+        <select v-model.number="pageSize" class="board-control">
+          <option v-for="size in pageSizeOptions" :key="size" :value="size">{{ size }}개</option>
+        </select>
+      </label>
+    </div>
+
     <div class="board-post-list">
       <BoardPostCard
-        v-for="post in filteredPosts"
+        v-for="post in paginatedPosts"
         :key="post.id"
         :post="post"
         @like="handleLike"
@@ -203,6 +270,39 @@ function handleBookmark(postId) {
         {{ emptyStateMessage }}
       </p>
     </div>
+
+    <nav v-if="filteredPosts.length && totalPages > 1" class="board-pagination" aria-label="게시글 페이지 이동">
+      <button
+        class="board-page-button board-page-move"
+        type="button"
+        :disabled="currentPage === 1"
+        @click="goToPage(currentPage - 1)"
+      >
+        이전
+      </button>
+      <template v-for="item in paginationItems" :key="item">
+        <span v-if="typeof item === 'string'" class="board-page-ellipsis" aria-hidden="true">…</span>
+        <button
+          v-else
+          class="board-page-button"
+          :class="{ active: currentPage === item }"
+          type="button"
+          :aria-current="currentPage === item ? 'page' : undefined"
+          :aria-label="`${item}페이지`"
+          @click="goToPage(item)"
+        >
+          {{ item }}
+        </button>
+      </template>
+      <button
+        class="board-page-button board-page-move"
+        type="button"
+        :disabled="currentPage === totalPages"
+        @click="goToPage(currentPage + 1)"
+      >
+        다음
+      </button>
+    </nav>
   </section>
 </template>
 
@@ -218,6 +318,86 @@ function handleBookmark(postId) {
   gap: 14px;
 }
 
+.board-page-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: -6px 0 16px;
+}
+
+.board-page-options p {
+  margin: 0;
+  color: #6d7772;
+  font-size: 13px;
+}
+
+.board-page-options strong {
+  color: var(--green);
+}
+
+.board-page-size {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #5d6862;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.board-page-size .board-control {
+  width: 92px;
+  min-height: 40px;
+  padding: 8px 30px 8px 10px;
+}
+
+.board-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 28px;
+}
+
+.board-page-button {
+  display: grid;
+  place-items: center;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 10px;
+  color: var(--green);
+  border: 1px solid #d4ddd7;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.board-page-button:hover:not(:disabled),
+.board-page-button:focus-visible,
+.board-page-button.active {
+  color: white;
+  border-color: var(--green);
+  background: var(--green);
+}
+
+.board-page-button:disabled {
+  color: #a8b0ac;
+  background: #f2f4f1;
+  cursor: not-allowed;
+}
+
+.board-page-move {
+  min-width: 66px;
+}
+
+.board-page-ellipsis {
+  padding: 0 3px;
+  color: #7b8580;
+}
+
 @media (max-width: 760px) {
   .board-list-toolbar {
     align-items: stretch;
@@ -227,6 +407,11 @@ function handleBookmark(postId) {
 
   .board-list-toolbar-actions .button {
     flex: 1 1 180px;
+  }
+
+  .board-page-options {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 </style>

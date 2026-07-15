@@ -1,4 +1,11 @@
 import assert from 'node:assert/strict'
+import { boardSeedPosts } from '../data/boardSeedPosts.js'
+
+assert.equal(boardSeedPosts.length, 30)
+assert.ok(new Set(boardSeedPosts.map((post) => post.postCategory)).size >= 4)
+assert.ok(new Set(boardSeedPosts.map((post) => post.place?.category)).size >= 7)
+assert.ok(new Set(boardSeedPosts.map((post) => post.likes)).size >= 20)
+assert.ok(new Set(boardSeedPosts.map((post) => post.views)).size >= 20)
 
 let writeCount = 0
 let storedPosts = JSON.stringify([

@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { regionCategories } from '../data/regionCategories'
+import { buildRegionDetailItems } from '../utils/regionDetailDisplay'
 import { getChatbotPlacesByContentType, getRegionCategorySummaries } from '../../chatbot/services/chatbotDatabase'
 
 const query = ref('')
@@ -33,6 +34,7 @@ const selectedItem = computed(() => {
     null
   )
 })
+const detailItems = computed(() => buildRegionDetailItems(selectedItem.value, selectedCategory.value))
 
 const MIN_RADIUS = 4
 const MAX_RADIUS = 11
@@ -283,13 +285,17 @@ onBeforeUnmount(() => {
         <div ref="mapContainer" class="map-frame"></div>
       </div>
 
-      <aside class="map-detail-card">
+      <aside class="map-detail-card detail-panel">
         <p class="eyebrow">SELECTED</p>
         <h2>{{ selectedItem?.title || '마커를 선택해 주세요' }}</h2>
-        <p>{{ selectedItem?.addr1 || '지도를 눌러서 상세 정보를 확인해보세요.' }}</p>
-        <ul v-if="selectedItem">
-          <li><strong>주소</strong><span>{{ selectedItem.addr1 }}</span></li>
-          <li><strong>좌표</strong><span>{{ selectedItem.mapy }}, {{ selectedItem.mapx }}</span></li>
+        <p class="detail-description">
+          {{ selectedItem ? '선택한 권역 정보를 상세하게 확인해보세요.' : '지도를 눌러서 상세 정보를 확인해보세요.' }}
+        </p>
+        <ul v-if="detailItems.length">
+          <li v-for="item in detailItems" :key="item.label">
+            <strong>{{ item.label }}</strong>
+            <span>{{ item.value }}</span>
+          </li>
         </ul>
         <RouterLink
           v-if="selectedItem"
@@ -316,11 +322,79 @@ onBeforeUnmount(() => {
   will-change: transform;
 }
 
+.map-panel {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 20px;
+  align-items: stretch;
+}
+
+.map-card,
+.map-detail-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
 .map-frame {
+  flex: 1;
   min-height: 420px;
 }
 
+.map-detail-card {
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  height: 100%;
+  gap: 12px;
+  padding: 20px;
+  overflow: hidden;        
+}
+
+.map-detail-card h2 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.3;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.map-detail-card p,
+.map-detail-card li {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.map-detail-card ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.map-detail-card li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.map-detail-card li strong {
+  color: var(--green);
+  flex-shrink: 0;          
+}
+
+.map-detail-card li span {
+  text-align: right;
+  min-width: 0;            
+}
+
+
 .region-detail-link {
-  margin-top: 14px;
+  margin-top: 8px;
 }
 </style>

@@ -1,6 +1,6 @@
 let googleMapsLoader = null
 
-function loadGoogleMaps() {
+export function loadGoogleMaps() {
   if (typeof window === 'undefined') return Promise.reject(new Error('브라우저에서만 Google Maps를 사용할 수 있습니다.'))
   if (window.google?.maps?.DirectionsService) return Promise.resolve(window.google.maps)
   if (googleMapsLoader) return googleMapsLoader

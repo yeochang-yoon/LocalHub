@@ -2,10 +2,16 @@
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { regionCategories } from '../data/regionCategories'
 import { buildRegionDetailItems } from '../utils/regionDetailDisplay'
+import { loadRegionViewState, saveRegionViewState } from '../services/regionViewState'
 import { getChatbotPlacesByContentType, getRegionCategorySummaries } from '../../chatbot/services/chatbotDatabase'
 
-const query = ref('')
-const selectedCategory = ref('관광지')
+const restoredViewState = loadRegionViewState()
+const query = ref(restoredViewState.query)
+const selectedCategory = ref(
+  regionCategories.some((item) => item.name === restoredViewState.selectedCategory)
+    ? restoredViewState.selectedCategory
+    : '관광지'
+)
 const mapContainer = ref(null)
 const mapInstance = ref(null)
 const markerLayer = ref(null)
@@ -17,6 +23,7 @@ const markerMap = new Map()
 let isRendering = false
 let resizeObserver = null
 let canvasRenderer = null
+let isRestoringMapView = Boolean(restoredViewState.mapCenter && restoredViewState.mapZoom !== null)
 
 const regionCategoryList = ref(regionCategories.map((item) => ({ ...item, count: 0 })))
 const activeItems = ref([])
@@ -26,7 +33,7 @@ const filteredCategories = computed(() => {
   return regionCategoryList.value.filter((item) => item.name.includes(search))
 })
 
-const selectedId = ref('')
+const selectedId = ref(restoredViewState.selectedId)
 const selectedItem = computed(() => {
   return (
     activeItems.value.find((item) => item.contentid === selectedId.value) ||
@@ -38,6 +45,17 @@ const detailItems = computed(() => buildRegionDetailItems(selectedItem.value, se
 
 const MIN_RADIUS = 4
 const MAX_RADIUS = 11
+
+function persistRegionViewState() {
+  const center = mapInstance.value?.getCenter()
+  saveRegionViewState({
+    query: query.value,
+    selectedCategory: selectedCategory.value,
+    selectedId: selectedId.value,
+    mapCenter: center ? { lat: center.lat, lng: center.lng } : restoredViewState.mapCenter,
+    mapZoom: mapInstance.value?.getZoom() ?? restoredViewState.mapZoom,
+  })
+}
 
 const radiusForZoom = (zoom) => {
   const z = typeof zoom === 'number' ? zoom : 10
@@ -103,8 +121,16 @@ const renderMarkers = () => {
   mapInstance.value.closePopup()
 
   if (markers.length) {
-    const bounds = window.L.latLngBounds(markers.map((marker) => marker.getLatLng()))
-    mapInstance.value.fitBounds(bounds.pad(0.2), { animate: false })
+    if (isRestoringMapView) {
+      mapInstance.value.setView(
+        [restoredViewState.mapCenter.lat, restoredViewState.mapCenter.lng],
+        restoredViewState.mapZoom,
+        { animate: false }
+      )
+    } else {
+      const bounds = window.L.latLngBounds(markers.map((marker) => marker.getLatLng()))
+      mapInstance.value.fitBounds(bounds.pad(0.2), { animate: false })
+    }
   }
 
   isRendering = false
@@ -124,7 +150,7 @@ const updateSelectedMarkerStyle = (newId, oldId) => {
   newMarker.setStyle(markerStyle(true, zoom))
   newMarker.bringToFront()
 
-  if (isRendering) return
+  if (isRendering || isRestoringMapView) return
 
   mapInstance.value.panTo(newMarker.getLatLng(), {
     animate: true,
@@ -197,7 +223,12 @@ onMounted(() => {
       zoomAnimation: true,
       markerZoomAnimation: true,
     })
-    .setView([35.17, 129.07], 10)
+    .setView(
+      restoredViewState.mapCenter
+        ? [restoredViewState.mapCenter.lat, restoredViewState.mapCenter.lng]
+        : [35.17, 129.07],
+      restoredViewState.mapZoom ?? 10
+    )
 
   window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors',
@@ -209,12 +240,24 @@ onMounted(() => {
   markerLayer.value.addTo(mapInstance.value)
 
   mapInstance.value.on('zoomend', refreshMarkerSizes)
+  mapInstance.value.on('moveend', persistRegionViewState)
 
   loadCategoryCounts()
   loadItemsByCategory(selectedCategory.value)
   renderMarkers()
 
-  nextTick(() => mapInstance.value?.invalidateSize())
+  nextTick(() => {
+    mapInstance.value?.invalidateSize()
+    if (isRestoringMapView) {
+      mapInstance.value?.setView(
+        [restoredViewState.mapCenter.lat, restoredViewState.mapCenter.lng],
+        restoredViewState.mapZoom,
+        { animate: false }
+      )
+      isRestoringMapView = false
+    }
+    persistRegionViewState()
+  })
 
   if (typeof ResizeObserver !== 'undefined') {
     resizeObserver = new ResizeObserver(() => {
@@ -225,12 +268,14 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  persistRegionViewState()
   if (resizeObserver) {
     resizeObserver.disconnect()
     resizeObserver = null
   }
   if (mapInstance.value) {
     mapInstance.value.off('zoomend', refreshMarkerSizes)
+    mapInstance.value.off('moveend', persistRegionViewState)
     mapInstance.value.remove()
     mapInstance.value = null
   }
@@ -301,6 +346,7 @@ onBeforeUnmount(() => {
           v-if="selectedItem"
           class="button board-button board-button--secondary region-detail-link"
           :to="{ name: 'region-detail', params: { contentId: selectedItem.contentid } }"
+          @click="persistRegionViewState"
         >
           상세페이지 보기
         </RouterLink>

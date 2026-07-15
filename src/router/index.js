@@ -43,6 +43,11 @@ const routes = [
     component: () => import('@/features/regions/views/RegionDetailView.vue'),
   },
   {
+    path: '/calendar',
+    name: 'calendar',
+    component: () => import('@/features/calendar/views/CalendarView.vue'),
+  },
+  {
     path: '/:pathMatch(.*)*',
     redirect: '/',
   },

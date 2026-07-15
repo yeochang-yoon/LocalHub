@@ -1,60 +1,234 @@
 <script setup>
-const services = [
-  {
-    title: '동네 이야기',
-    description: '부산의 소식과 경험을 이웃들과 자유롭게 나눠보세요.',
-    link: '/board',
-    label: '게시판 가기',
-    icon: '✎',
-  },
-  {
-    title: '권역 정보',
-    description: '관광지부터 문화시설까지 부산의 매력을 권역별로 찾아보세요.',
-    link: '/regions',
-    label: '지역 둘러보기',
-    icon: '⌖',
-  },
+import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { getDashboardPlaces, getDistrictRecommendations } from '@/features/dashboard/services/api/dashboardApi'
+import { getBusanFestivalCalendarItems } from '@/features/calendar/services/api/calendarApi'
+import { loadPosts } from '@/features/board/services/boardStorage'
+import { formatPostDate, getPostTimestamp } from '@/features/board/utils/boardDate'
+
+const router = useRouter()
+const keyword = ref('')
+const festivals = ref([])
+const recommendations = ref([])
+const posts = ref([])
+const placeImages = ref(new Map())
+
+const purposes = [
+  { id: 'sightseeing', title: '명소', description: '부산을 대표하는 풍경과 여행지', icon: '⌖' },
+  { id: 'culture', title: '문화', description: '전시와 공연, 이야기가 있는 공간', icon: '▣' },
+  { id: 'activity', title: '액티비티', description: '바다와 도심에서 즐기는 체험', icon: '◒' },
+  { id: 'rest', title: '휴식', description: '여행의 쉼표가 되어줄 숙소', icon: '⌂' },
+  { id: 'shopping', title: '쇼핑', description: '시장부터 감각적인 로컬 상점까지', icon: '◇' },
 ]
+
+const featuredFestivals = computed(() => festivals.value.slice(0, 3))
+const featuredRecommendations = computed(() => recommendations.value.slice(0, 3))
+const featuredPosts = computed(() => posts.value.slice(0, 3))
+
+function searchPlaces() {
+  const value = keyword.value.trim()
+  router.push({ name: 'dashboard', query: value ? { keyword: value } : {} })
+}
 
 function openChat() {
   document.querySelector('[data-chat-trigger]')?.click()
 }
+
+function loadHomeContent() {
+  try {
+    const places = getDashboardPlaces()
+    placeImages.value = new Map(places.filter((place) => place.image).map((place) => [String(place.id), place.image]))
+    festivals.value = getBusanFestivalCalendarItems()
+    recommendations.value = getDistrictRecommendations({ purposes: ['sightseeing', 'culture'] })
+  } catch {
+    festivals.value = []
+    recommendations.value = []
+  }
+
+  posts.value = loadPosts()
+    .sort((left, right) => (getPostTimestamp(right.createdAt) || 0) - (getPostTimestamp(left.createdAt) || 0))
+}
+
+onMounted(loadHomeContent)
 </script>
 
 <template>
-  <section class="hero">
-    <div class="container hero-content">
-      <p class="eyebrow">BUSAN LOCAL GUIDE</p>
-      <h1>우리 동네를 발견하고,<br /><em>이야기로 연결해요.</em></h1>
-      <p class="hero-copy">부산 곳곳의 유용한 정보와 이웃의 생생한 이야기를 한곳에서 만나보세요.</p>
-      <div class="hero-actions">
-        <RouterLink class="button button-primary" to="/regions">부산 둘러보기</RouterLink>
-        <RouterLink class="button button-ghost" to="/board">이야기 나누기</RouterLink>
+  <main class="home-page">
+    <section class="hero home-hero">
+      <div class="container hero-content">
+        <p class="eyebrow">DISCOVER YOUR BUSAN</p>
+        <h1>오늘은 부산<br /><em>어디로 떠나볼까요?</em></h1>
+        <p class="hero-copy">낯익은 바다부터 숨은 골목까지, 취향에 맞는 부산을 발견해 보세요.</p>
+        <form class="home-search" role="search" @submit.prevent="searchPlaces">
+          <label class="sr-only" for="home-place-search">지역 또는 장소 검색</label>
+          <input id="home-place-search" v-model="keyword" type="search" placeholder="예: 해운대, 박물관, 전통시장" />
+          <button type="submit">찾아보기 <span aria-hidden="true">→</span></button>
+        </form>
+        <div class="hero-actions">
+          <RouterLink class="button button-ghost" to="/regions">전체 여행지 보기</RouterLink>
+          <button class="button home-chat-button" type="button" @click="openChat">AI에게 추천받기</button>
+        </div>
       </div>
-    </div>
-  </section>
+      <div class="hero-stat" aria-hidden="true"><strong>BUSAN</strong><span>바다와 도시가 만나는 여행</span></div>
+    </section>
 
-  <section class="container service-section" aria-labelledby="service-title">
-    <div class="section-heading">
-      <div>
-        <p class="eyebrow">LOCALHUB SERVICES</p>
-        <h2 id="service-title">무엇을 찾고 계신가요?</h2>
+    <section class="container home-section purpose-section" aria-labelledby="purpose-title">
+      <header class="home-section-heading">
+        <div><p class="eyebrow">TRAVEL BY MOOD</p><h2 id="purpose-title">어떤 하루를 보내고 싶나요?</h2></div>
+        <RouterLink to="/dashboard">내 취향 더 자세히 찾기 →</RouterLink>
+      </header>
+      <div class="purpose-grid">
+        <RouterLink
+          v-for="purpose in purposes"
+          :key="purpose.id"
+          class="purpose-card"
+          :to="{ name: 'dashboard', query: { purposes: purpose.id } }"
+        >
+          <span class="purpose-icon" aria-hidden="true">{{ purpose.icon }}</span>
+          <div><h3>{{ purpose.title }}</h3><p>{{ purpose.description }}</p></div>
+          <span aria-hidden="true">↗</span>
+        </RouterLink>
       </div>
-      <p>화면 오른쪽 아래의 AI 버튼을 누르면<br />부산 여행 도우미와 대화할 수 있어요.</p>
-    </div>
-    <div class="service-grid">
-      <RouterLink v-for="service in services" :key="service.title" class="service-card" :to="service.link">
-        <span class="service-icon" aria-hidden="true">{{ service.icon }}</span>
-        <h3>{{ service.title }}</h3>
-        <p>{{ service.description }}</p>
-        <span class="card-link">{{ service.label }} <span aria-hidden="true">→</span></span>
-      </RouterLink>
-      <button class="service-card chat-guide-card" type="button" @click="openChat">
-        <span class="service-icon" aria-hidden="true">✦</span>
-        <h3>AI 부산 도우미</h3>
-        <p>궁금한 여행지와 코스를 AI에게 편하게 물어보세요.</p>
-        <span class="card-link">대화 시작하기 <span aria-hidden="true">→</span></span>
-      </button>
-    </div>
-  </section>
+    </section>
+
+    <section v-if="featuredFestivals.length" class="home-section festival-section" aria-labelledby="festival-title">
+      <div class="container">
+        <header class="home-section-heading light-heading">
+          <div><p class="eyebrow">NOW IN BUSAN</p><h2 id="festival-title">부산에서 만나는 축제와 공연</h2></div>
+          <RouterLink to="/calendar">캘린더 전체 보기 →</RouterLink>
+        </header>
+        <div class="festival-grid">
+          <RouterLink
+            v-for="(festival, index) in featuredFestivals"
+            :key="festival.contentId"
+            class="home-festival-card"
+            :class="{ featured: index === 0 }"
+            :to="{ name: 'region-detail', params: { contentId: festival.contentId } }"
+            :style="placeImages.get(String(festival.contentId)) ? { backgroundImage: `linear-gradient(180deg, transparent 20%, rgba(8, 35, 29, .92)), url(${placeImages.get(String(festival.contentId))})` } : undefined"
+          >
+            <span>축제 · 공연</span>
+            <div><h3>{{ festival.title }}</h3><p>{{ festival.address1 || '부산광역시' }}</p></div>
+          </RouterLink>
+        </div>
+      </div>
+    </section>
+
+    <section v-if="featuredRecommendations.length" class="container home-section" aria-labelledby="recommend-title">
+      <header class="home-section-heading">
+        <div><p class="eyebrow">RECOMMENDED DISTRICTS</p><h2 id="recommend-title">처음 만나는 부산이라면</h2></div>
+        <div class="recommend-heading-actions">
+          <div class="recommend-help">
+            <button type="button" aria-label="관광·문화 추천 지수 산출 기준" aria-describedby="recommend-score-help">?</button>
+            <div id="recommend-score-help" class="recommend-tooltip" role="tooltip">
+              <strong>추천 지수 산출 기준</strong>
+              <p>구·군별 관광지, 문화시설, 축제·공연, 여행코스 수를 유형별 최다 지역과 비교해 정규화한 뒤 평균을 냅니다.</p>
+              <p>점수가 같으면 관련 유형의 다양성, 관광지 수, 전체 관련 시설 수 순으로 순위를 정합니다.</p>
+            </div>
+          </div>
+          <RouterLink to="/dashboard">추천 지역 더 보기 →</RouterLink>
+        </div>
+      </header>
+      <div class="district-grid">
+        <article v-for="(item, index) in featuredRecommendations" :key="item.district" class="district-card">
+          <span class="district-rank">0{{ index + 1 }}</span>
+          <p>관광·문화 추천 지수 {{ item.matchRate }}점</p>
+          <h3>{{ item.district }}</h3>
+          <div class="district-links">
+            <RouterLink v-for="place in item.representativePlaces" :key="place.id" :to="{ name: 'region-detail', params: { contentId: place.id } }">
+              {{ place.title }} <span>→</span>
+            </RouterLink>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="container route-cta" aria-labelledby="route-title">
+      <div class="route-visual" aria-hidden="true"><span>1</span><i></i><span>2</span><i></i><span>3</span></div>
+      <div><p class="eyebrow">TRIP CURATOR</p><h2 id="route-title">어디부터 갈지 고민이라면</h2><p>날짜와 시간, 여행 스타일을 선택하세요. 이동 거리를 고려해 나만의 부산 여행 일정을 구성해 드려요.</p></div>
+      <RouterLink class="button button-primary" to="/trip-planner">여행 추천 시작하기</RouterLink>
+    </section>
+
+    <section v-if="featuredPosts.length" class="container home-section story-section" aria-labelledby="story-title">
+      <header class="home-section-heading">
+        <div><p class="eyebrow">LOCAL STORIES</p><h2 id="story-title">여행자들이 남긴 부산 이야기</h2></div>
+        <RouterLink to="/board">모든 이야기 보기 →</RouterLink>
+      </header>
+      <div class="story-grid">
+        <RouterLink v-for="post in featuredPosts" :key="post.id" class="story-card" :to="{ name: 'board-detail', params: { id: post.id } }">
+          <div><span class="board-badge">{{ post.postCategory }}</span><span>{{ formatPostDate(post.createdAt) }}</span></div>
+          <h3>{{ post.title }}</h3>
+          <p>{{ post.content }}</p>
+          <footer><span>{{ post.author || '작성자 미상' }}</span><span>조회 {{ post.views || 0 }} · 좋아요 {{ post.likes || 0 }}</span></footer>
+        </RouterLink>
+      </div>
+    </section>
+  </main>
 </template>
+
+<style scoped>
+.home-page { overflow: hidden; }
+.home-hero { position: relative; min-height: 660px; background-position: center 58%; }
+.home-hero::after { position: absolute; inset: 0; content: ''; pointer-events: none; background: linear-gradient(180deg, transparent 72%, rgba(248,247,242,.12)); }
+.home-hero .hero-content { position: relative; z-index: 1; }
+.home-search { display: flex; width: min(650px, 100%); margin-bottom: 18px; padding: 7px; border-radius: 10px; background: white; box-shadow: 0 18px 45px rgba(5,30,24,.24); }
+.home-search input { flex: 1; min-width: 0; padding: 12px 15px; border: 0; outline: 0; color: #25302c; background: transparent; }
+.home-search button { min-height: 48px; padding: 0 20px; color: white; border: 0; border-radius: 7px; background: var(--orange); cursor: pointer; font-weight: 700; }
+.home-chat-button { color: white; border: 1px solid rgba(255,255,255,.55); background: rgba(255,255,255,.08); }
+.hero-stat { position: absolute; right: max(20px, calc((100vw - 1120px) / 2)); bottom: 42px; z-index: 1; display: grid; color: white; text-align: right; }
+.hero-stat strong { font-family: 'DM Serif Display', serif; font-size: 42px; font-weight: 400; letter-spacing: .08em; }
+.hero-stat span { color: rgba(255,255,255,.72); font-size: 12px; }
+.home-section { padding-block: 90px; }
+.home-section-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 32px; }
+.home-section-heading .eyebrow { margin-bottom: 10px; }
+.home-section-heading h2, .route-cta h2 { margin: 0; color: var(--green); font-family: 'DM Serif Display', 'Noto Sans KR', serif; font-size: clamp(30px, 4vw, 44px); font-weight: 400; }
+.home-section-heading > a { flex: 0 0 auto; color: var(--orange); font-size: 13px; font-weight: 700; }
+.recommend-heading-actions { display: flex; align-items: center; gap: 14px; }
+.recommend-heading-actions > a { color: var(--orange); font-size: 13px; font-weight: 700; }
+.recommend-help { position: relative; }
+.recommend-help > button { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; color: var(--green); border: 1px solid #afc2b5; border-radius: 50%; background: white; cursor: help; font-size: 14px; font-weight: 800; }
+.recommend-help > button:hover, .recommend-help > button:focus-visible { color: white; border-color: var(--green); outline: 0; background: var(--green); }
+.recommend-tooltip { position: absolute; top: calc(100% + 10px); right: 0; z-index: 8; width: min(350px, calc(100vw - 40px)); padding: 16px; visibility: hidden; opacity: 0; color: #5e6a64; border: 1px solid #cfdcd2; border-radius: 10px; background: white; box-shadow: 0 14px 34px rgba(23,79,64,.16); transform: translateY(-5px); transition: opacity .16s, transform .16s, visibility .16s; }
+.recommend-tooltip::before { position: absolute; right: 8px; bottom: 100%; width: 10px; height: 10px; content: ''; border-top: 1px solid #cfdcd2; border-left: 1px solid #cfdcd2; background: white; transform: translateY(5px) rotate(45deg); }
+.recommend-tooltip strong { display: block; margin-bottom: 8px; color: var(--green); font-size: 14px; }
+.recommend-tooltip p { margin: 0; font-size: 12px; line-height: 1.65; }
+.recommend-tooltip p + p { margin-top: 7px; }
+.recommend-help:hover .recommend-tooltip, .recommend-help:focus-within .recommend-tooltip { visibility: visible; opacity: 1; transform: translateY(0); }
+.purpose-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+.purpose-card { display: grid; min-height: 210px; padding: 22px; border: 1px solid var(--line); border-radius: 12px; background: white; transition: transform .2s, box-shadow .2s, border-color .2s; }
+.purpose-card:hover { transform: translateY(-5px); border-color: #bbcec1; box-shadow: 0 16px 30px rgba(23,79,64,.1); }
+.purpose-card > span:last-child { align-self: end; justify-self: end; color: var(--orange); }
+.purpose-icon { display: grid; place-items: center; width: 46px; height: 46px; color: var(--green); border-radius: 50%; background: var(--mint); font-size: 22px; }
+.purpose-card h3 { margin: 20px 0 7px; color: var(--green); }
+.purpose-card p { margin: 0; color: #748079; font-size: 13px; line-height: 1.6; }
+.festival-section { padding-block: 90px; color: white; background: var(--green); }
+.light-heading h2, .light-heading > a { color: white; }
+.festival-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 16px; }
+.home-festival-card { display: flex; min-height: 320px; padding: 24px; flex-direction: column; justify-content: space-between; border: 1px solid rgba(255,255,255,.16); border-radius: 14px; background-color: #24604f; background-position: center; background-size: cover; transition: transform .2s; }
+.home-festival-card:hover { transform: translateY(-4px); }
+.home-festival-card > span { width: fit-content; padding: 6px 9px; border-radius: 999px; background: rgba(255,255,255,.16); font-size: 11px; font-weight: 700; }
+.home-festival-card h3 { margin: 0 0 8px; font-size: 21px; }
+.home-festival-card p { margin: 0; color: rgba(255,255,255,.72); font-size: 13px; }
+.district-grid, .story-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.district-card { position: relative; padding: 28px; overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: white; }
+.district-rank { position: absolute; top: 15px; right: 20px; color: #e6eee8; font-family: 'DM Serif Display', serif; font-size: 54px; }
+.district-card > p { position: relative; margin: 0; color: var(--orange); font-size: 12px; font-weight: 700; }
+.district-card h3 { position: relative; margin: 7px 0 22px; color: var(--green); font-size: 25px; }
+.district-links { position: relative; display: grid; gap: 10px; }
+.district-links a { display: flex; justify-content: space-between; gap: 12px; padding-top: 10px; color: #5e6a64; border-top: 1px solid #edf0ed; font-size: 13px; }
+.district-links a span { color: var(--orange); }
+.route-cta { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 38px; margin-block: 10px 50px; padding-block: 46px; padding-inline: 52px; color: white; border-radius: 18px; background: linear-gradient(120deg, #123f34, #246551); }
+.route-cta h2 { color: white; }
+.route-cta p:last-child { max-width: 620px; margin: 12px 0 0; color: #cddbd4; font-size: 14px; line-height: 1.7; }
+.route-visual { display: flex; align-items: center; }
+.route-visual span { display: grid; place-items: center; width: 38px; height: 38px; flex: 0 0 auto; color: var(--green); border-radius: 50%; background: #f3b18c; font-weight: 800; }
+.route-visual i { width: 26px; height: 2px; background: rgba(255,255,255,.35); }
+.story-section { padding-top: 50px; }
+.story-card { display: flex; min-height: 250px; padding: 24px; flex-direction: column; border: 1px solid var(--line); border-radius: 14px; background: white; transition: transform .2s, box-shadow .2s; }
+.story-card:hover { transform: translateY(-4px); box-shadow: 0 14px 30px rgba(23,79,64,.09); }
+.story-card > div, .story-card footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: #87908b; font-size: 11px; }
+.story-card h3 { margin: 22px 0 10px; color: var(--green); font-size: 19px; }
+.story-card > p { display: -webkit-box; margin: 0 0 24px; overflow: hidden; color: #6d7772; font-size: 13px; line-height: 1.7; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+.story-card footer { margin-top: auto; padding-top: 14px; border-top: 1px solid #edf0ed; }
+@media (max-width: 980px) { .purpose-grid { grid-template-columns: repeat(3, 1fr); } .festival-grid { grid-template-columns: 1fr 1fr; } .home-festival-card.featured { grid-column: 1 / -1; } .route-cta { grid-template-columns: 1fr; } .route-visual { display: none; } }
+@media (max-width: 700px) { .home-hero { min-height: 620px; } .hero-stat { display: none; } .home-search { align-items: stretch; flex-direction: column; background: rgba(255,255,255,.96); } .home-search button { width: 100%; } .home-section { padding-block: 68px; } .home-section-heading { align-items: flex-start; flex-direction: column; } .purpose-grid, .festival-grid, .district-grid, .story-grid { grid-template-columns: 1fr; } .purpose-card { min-height: 170px; } .home-festival-card.featured { grid-column: auto; } .home-festival-card { min-height: 260px; } .route-cta { width: calc(100% - 28px); margin-bottom: 20px; padding: 32px 24px; } }
+</style>

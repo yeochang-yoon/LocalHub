@@ -135,7 +135,7 @@ function buildChatLinks(context) {
   return placeLinks
 }
 
-export async function askOpenAI(messages) {
+export async function askOpenAI(messages, { signal } = {}) {
   const apiKey = import.meta.env.VITE_OPENAI_API_KEY
   if (!apiKey) throw new Error('VITE_OPENAI_API_KEY가 설정되지 않았습니다.')
 
@@ -148,6 +148,7 @@ export async function askOpenAI(messages) {
 
   const response = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
+    signal,
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
       model: import.meta.env.VITE_OPENAI_MODEL || 'gpt-5-mini',

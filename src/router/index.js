@@ -38,6 +38,11 @@ const routes = [
     component: () => import('@/features/regions/views/RegionView.vue'),
   },
   {
+    path: '/regions/:contentId',
+    name: 'region-detail',
+    component: () => import('@/features/regions/views/RegionDetailView.vue'),
+  },
+  {
     path: '/:pathMatch(.*)*',
     redirect: '/',
   },

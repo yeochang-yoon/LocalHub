@@ -207,7 +207,7 @@ function handleBookmark(postId) {
   <section class="page-hero">
     <div class="container">
       <p class="eyebrow">COMMUNITY</p>
-      <h1>동네 이야기</h1>
+      <h1><span class="title-emoji" aria-hidden="true">💬</span> 동네 이야기</h1>
       <p>부산에서 발견한 소식과 경험을 이웃들과 나눠보세요.</p>
     </div>
   </section>

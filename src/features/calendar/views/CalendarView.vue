@@ -200,7 +200,7 @@ onMounted(() => {
   <section class="page-hero">
     <div class="container">
       <p class="eyebrow">BUSAN FESTIVAL CALENDAR</p>
-      <h1>부산 캘린더</h1>
+      <h1><span class="title-emoji" aria-hidden="true">🎉</span> 부산 캘린더</h1>
       <p>부산 축제·공연 일정을 확인해보세요.</p>
     </div>
   </section>
@@ -291,20 +291,22 @@ onMounted(() => {
 }
 
 .day-grid {
-  border-top: 1px solid #e4ebe5;
-  border-left: 1px solid #e4ebe5;
+  overflow: hidden;
+  border-top: 1px solid #d8ebef;
+  border-left: 1px solid #d8ebef;
+  border-radius: 14px;
 }
 
 .calendar-cell {
   min-height: 120px;
   padding: 8px;
-  border-right: 1px solid #e4ebe5;
-  border-bottom: 1px solid #e4ebe5;
+  border-right: 1px solid #d8ebef;
+  border-bottom: 1px solid #d8ebef;
   background: #fff;
 }
 
 .calendar-cell.empty {
-  background: #f8faf7;
+  background: #f3fafc;
 }
 
 .calendar-cell > header {
@@ -323,17 +325,17 @@ onMounted(() => {
   position: relative;
   display: block;
   padding: 6px 8px;
-  border: 1px solid #d2ddd4;
+  border: 1px solid #bddde5;
   border-radius: 8px;
-  background: #f4f8f3;
-  color: #1f5a49;
+  background: #eaf8fb;
+  color: var(--green);
   font-size: 12px;
   font-weight: 700;
 }
 
 .festival-chip:hover {
   border-color: var(--orange);
-  background: #fff6f1;
+  background: #fff3ef;
 }
 
 .festival-chip-label {
@@ -354,8 +356,8 @@ onMounted(() => {
   border: 1px solid #d8e3da;
   border-radius: 10px;
   background: white;
-  box-shadow: 0 12px 26px rgba(23, 79, 64, .16);
-  color: #3a4741;
+  box-shadow: 0 14px 30px rgba(5, 83, 113, .16);
+  color: #294957;
   font-size: 12px;
   line-height: 1.45;
 }

@@ -52,7 +52,7 @@ const markerStyle = (isSelected, zoom) => {
     color: '#fff',
     weight: r >= 7 ? 2 : 1,
     opacity: 1,
-    fillColor: isSelected ? '#e86f42' : '#174f40',
+    fillColor: isSelected ? '#ff7052' : '#087fa7',
     fillOpacity: 1,
   }
 }
@@ -243,7 +243,7 @@ onBeforeUnmount(() => {
   <section class="page-hero region-hero">
     <div class="container">
       <p class="eyebrow">EXPLORE BUSAN</p>
-      <h1>권역 정보</h1>
+      <h1><span class="title-emoji" aria-hidden="true">🗺️</span> 권역 정보</h1>
       <p>관광지, 레포츠, 문화시설, 쇼핑, 숙박, 여행코스, 축제·공연 데이터를 지도 위에 바로 표시해보세요.</p>
       <label class="search-box">
         <span class="sr-only">분류 검색</span>

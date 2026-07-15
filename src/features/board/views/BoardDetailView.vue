@@ -86,7 +86,7 @@ function handleBookmark() {
   <section class="page-hero">
     <div class="container">
       <p class="eyebrow">COMMUNITY</p>
-      <h1>게시글 상세</h1>
+      <h1><span class="title-emoji" aria-hidden="true">📖</span> 게시글 상세</h1>
       <p>선택한 게시물을 확인하고, 수정하거나 삭제할 수 있습니다.</p>
     </div>
   </section>

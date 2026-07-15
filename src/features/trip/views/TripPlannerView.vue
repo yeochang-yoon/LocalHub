@@ -243,7 +243,7 @@ function drawSchedule() {
   if (!map || !result.value || !window.L) return
   if (routeLayer) routeLayer.remove()
   routeLayer = window.L.layerGroup().addTo(map)
-  const colors = ['#e86f42', '#2f7c67', '#5e6fc4', '#a15d9c', '#b78524']
+  const colors = ['#ff7052', '#087fa7', '#526fc5', '#00a69a', '#d49b31']
   const bounds = []
 
   result.value.days.forEach((day, dayIndex) => {
@@ -308,14 +308,14 @@ onBeforeUnmount(() => {
   <section class="page-hero trip-hero">
     <div class="container">
       <p class="eyebrow">CURATE YOUR BUSAN</p>
-      <h1>부산 여행 큐레이터</h1>
+      <h1><span class="title-emoji" aria-hidden="true">🧳</span> 부산 여행 큐레이터</h1>
       <p>여행 시간과 스타일을 선택하면 이동 거리까지 고려해 하루를 구성해 드려요.</p>
     </div>
   </section>
 
   <main class="container page-content trip-page">
     <section v-if="savedTrips.length" class="saved-trips board-card" aria-labelledby="saved-trips-title">
-      <header><div><p class="eyebrow">SAVED TRIPS</p><h2 id="saved-trips-title">저장한 여행</h2></div><span>{{ savedTrips.length }}개</span></header>
+      <header><div><p class="eyebrow">SAVED TRIPS</p><h2 id="saved-trips-title">💾 저장한 여행</h2></div><span>{{ savedTrips.length }}개</span></header>
       <div class="saved-trip-list">
         <article v-for="trip in savedTrips" :key="trip.id">
           <button class="saved-trip-main" type="button" @click="restoreTrip(trip)">
@@ -473,7 +473,7 @@ onBeforeUnmount(() => {
 .place-search-heading > span { color: var(--orange); font-size: 12px; font-weight: 800; }
 .selected-search-place { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 6px 10px; padding: 11px; border: 1px solid #cfddd2; border-radius: 8px; background: white; }
 .selected-search-place small { grid-column: 2; color: #7b8580; font-size: 10px; }
-.place-search-results { position: absolute; left: 18px; right: 18px; z-index: 9; max-height: 230px; overflow-y: auto; border: 1px solid #ccd9cf; border-radius: 9px; background: white; box-shadow: 0 12px 30px rgba(23,79,64,.14); }
+.place-search-results { position: absolute; left: 18px; right: 18px; z-index: 9; max-height: 230px; overflow-y: auto; border: 1px solid #bddde5; border-radius: 12px; background: white; box-shadow: 0 14px 34px rgba(5,83,113,.15); }
 .place-search-results button { display: grid; gap: 3px; width: 100%; padding: 10px 12px; text-align: left; border: 0; border-bottom: 1px solid #edf1ed; background: white; cursor: pointer; }
 .place-search-results button:hover { background: var(--mint); }
 .place-search-results strong { color: var(--green); font-size: 12px; }
@@ -486,7 +486,7 @@ onBeforeUnmount(() => {
 .trip-fieldset legend { margin-bottom: 10px; color: var(--green); font-size: 13px; font-weight: 700; }
 .pace-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .pace-option { position: relative; padding: 17px; border: 1px solid #d6dfd8; border-radius: 10px; background: #fafbf8; cursor: pointer; }
-.pace-option.active { border-color: var(--orange); background: #fff8f4; box-shadow: 0 0 0 2px rgba(232,111,66,.09); }
+.pace-option.active { border-color: var(--orange); background: #fff5f1; box-shadow: 0 0 0 3px rgba(255,112,82,.1); }
 .pace-option input { position: absolute; opacity: 0; }
 .pace-option span { display: grid; gap: 5px; }
 .pace-option strong { color: var(--green); font-size: 14px; }
@@ -497,7 +497,7 @@ onBeforeUnmount(() => {
 .trip-submit { width: 100%; min-height: 52px; }
 .trip-result { margin-top: 60px; }
 .trip-result-heading { margin-bottom: 20px; }
-.trip-result-heading h2 { margin: 0; color: var(--green); font-family: 'DM Serif Display', 'Noto Sans KR', serif; font-size: 38px; font-weight: 400; }
+.trip-result-heading h2 { margin: 0; color: var(--green); font-family: var(--display-font); font-size: 38px; font-weight: 400; letter-spacing: -.04em; }
 .trip-result-heading > div:last-child { display: flex; align-items: baseline; gap: 6px; }
 .trip-result-heading > div:last-child strong { margin-left: 13px; color: var(--orange); font-size: 28px; }
 .trip-result-heading > div:last-child span { color: #748079; font-size: 13px; }
@@ -509,7 +509,7 @@ onBeforeUnmount(() => {
 .trip-map :deep(.leaflet-container) { height: 100%; }
 .trip-map :deep(.trip-number-marker-wrap) { background: transparent; border: 0; }
 .trip-map :deep(.trip-number-marker) { display: grid; place-items: center; width: 32px; height: 32px; color: white; border: 3px solid white; border-radius: 50%; box-shadow: 0 3px 10px rgba(0,0,0,.24); font-size: 12px; font-weight: 800; }
-.trip-map :deep(.trip-number-marker.required) { border-color: #ffd39f; box-shadow: 0 0 0 3px #e86f42, 0 3px 10px rgba(0,0,0,.24); }
+.trip-map :deep(.trip-number-marker.required) { border-color: #ffd4ca; box-shadow: 0 0 0 3px #ff7052, 0 3px 10px rgba(0,0,0,.24); }
 .trip-map :deep(.trip-start-marker-wrap) { background: transparent; border: 0; }
 .trip-map :deep(.trip-start-marker) { display: grid; place-items: center; width: 44px; height: 28px; color: white; border: 2px solid white; border-radius: 14px; background: #173f75; box-shadow: 0 3px 10px rgba(0,0,0,.24); font-size: 10px; font-weight: 800; }
 .trip-days { display: grid; gap: 18px; margin-top: 24px; }

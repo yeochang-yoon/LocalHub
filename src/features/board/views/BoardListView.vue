@@ -1,47 +1,108 @@
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { computed, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import BoardFilterBar from '../components/BoardFilterBar.vue'
+import BoardPostCard from '../components/BoardPostCard.vue'
+import { DEFAULT_POST_CATEGORY } from '../data/boardOptions.js'
+import { getPostTimestamp } from '../utils/boardDate.js'
 import { loadPosts, deletePost, toggleLike, toggleBookmark, validatePassword } from '../services/boardStorage'
 
-const router = useRouter()
-const route = useRoute()
-const posts = ref(loadPosts())
-const query = ref('')
-const showOnlyBookmarked = ref(route.name === 'board-bookmarks')
+const props = defineProps({
+  showBookmarks: {
+    type: Boolean,
+    default: false,
+  },
+})
 
-const isBookmarkPage = computed(() => route.name === 'board-bookmarks')
-const isSearching = computed(() => query.value.trim().length > 0)
+const router = useRouter()
+const posts = ref(loadPosts())
+const searchTarget = ref('title')
+const query = ref('')
+const sortOrder = ref('latest')
+const selectedCategory = ref('전체')
+
+const isBookmarkPage = computed(() => props.showBookmarks)
+const hasActiveFilter = computed(() => {
+  return query.value.trim().length > 0 || selectedCategory.value !== '전체'
+})
 
 watch(
-  () => route.name,
+  () => props.showBookmarks,
   () => {
-    showOnlyBookmarked.value = route.name === 'board-bookmarks'
     refreshPosts()
   }
 )
 
-onMounted(() => {
-  refreshPosts()
-})
+function compareDates(left, right, direction = 'desc') {
+  const leftTimestamp = getPostTimestamp(left.createdAt)
+  const rightTimestamp = getPostTimestamp(right.createdAt)
+
+  if (leftTimestamp === null && rightTimestamp === null) return 0
+  if (leftTimestamp === null) return 1
+  if (rightTimestamp === null) return -1
+
+  return direction === 'asc'
+    ? leftTimestamp - rightTimestamp
+    : rightTimestamp - leftTimestamp
+}
+
+function getCount(value) {
+  const number = Number(value)
+  return Number.isFinite(number) ? number : 0
+}
+
+function sortPosts(items) {
+  const nextItems = [...items]
+
+  if (sortOrder.value === 'oldest') {
+    return nextItems.sort((left, right) => compareDates(left, right, 'asc'))
+  }
+
+  if (sortOrder.value === 'likes') {
+    return nextItems.sort((left, right) => {
+      const countDifference = getCount(right.likes) - getCount(left.likes)
+      return countDifference || compareDates(left, right)
+    })
+  }
+
+  if (sortOrder.value === 'views') {
+    return nextItems.sort((left, right) => {
+      const countDifference = getCount(right.views) - getCount(left.views)
+      return countDifference || compareDates(left, right)
+    })
+  }
+
+  return nextItems.sort((left, right) => compareDates(left, right))
+}
 
 const filteredPosts = computed(() => {
   const term = query.value.trim().toLowerCase()
-  return posts.value.filter((post) => {
-    if (showOnlyBookmarked.value && !post.bookmarked) return false
+  const target = searchTarget.value === 'author' ? 'author' : 'title'
+
+  const matches = posts.value.filter((post) => {
+    if (isBookmarkPage.value && !post.bookmarked) return false
+
+    const category = post.postCategory || DEFAULT_POST_CATEGORY
+    if (selectedCategory.value !== '전체' && category !== selectedCategory.value) return false
+
     if (!term) return true
-    return [post.title, post.author, post.content]
-      .some((field) => field.toLowerCase().includes(term))
+    return String(post[target] ?? '').trim().toLowerCase().includes(term)
   })
+
+  return sortPosts(matches)
 })
 
 const emptyStateMessage = computed(() => {
   if (filteredPosts.value.length) return ''
-  if (showOnlyBookmarked.value) {
-    if (isSearching.value) return '북마크한 게시글 중 검색 결과가 없습니다.'
-    return '북마크한 게시글이 없습니다.'
+
+  if (isBookmarkPage.value) {
+    return hasActiveFilter.value
+      ? '북마크한 게시글 중 조건에 맞는 결과가 없습니다.'
+      : '북마크한 게시글이 없습니다.'
   }
-  if (isSearching.value) return '검색 결과가 없습니다.'
+
   if (!posts.value.length) return '게시글이 없습니다. 새 글을 작성해 보세요.'
+  if (hasActiveFilter.value) return '조건에 맞는 게시글이 없습니다.'
   return ''
 })
 
@@ -59,10 +120,6 @@ function goToBookmarkList() {
 
 function goToAllPosts() {
   router.push({ name: 'board-list' })
-}
-
-function openDetail(postId) {
-  router.push({ name: 'board-detail', params: { id: postId } })
 }
 
 function handleDelete(postId) {
@@ -101,13 +158,13 @@ function handleBookmark(postId) {
     </div>
   </section>
 
-  <section class="container page-content">
-    <div class="content-toolbar">
-      <p>전체 <strong>{{ filteredPosts.length }}</strong>개</p>
-      <div>
-        <button class="button button-primary" type="button" @click="goToCreate">새 글 쓰기</button>
+  <section class="container page-content board-page">
+    <div class="content-toolbar board-list-toolbar">
+      <p>{{ isBookmarkPage ? '북마크' : '전체' }} <strong>{{ filteredPosts.length }}</strong>개</p>
+      <div class="board-list-toolbar-actions">
+        <button class="button board-button board-button--primary" type="button" @click="goToCreate">새 글 쓰기</button>
         <button
-          class="button button-secondary"
+          class="button board-button board-button--secondary"
           type="button"
           @click="isBookmarkPage ? goToAllPosts() : goToBookmarkList()"
         >
@@ -116,27 +173,60 @@ function handleBookmark(postId) {
       </div>
     </div>
 
-    <div class="board-search-box">
-      <input v-model="query" type="search" placeholder="제목, 작성자, 내용을 검색하세요" />
-    </div>
+    <BoardFilterBar
+      v-model:search-target="searchTarget"
+      v-model:query="query"
+      v-model:sort-order="sortOrder"
+      v-model:category="selectedCategory"
+    />
 
-    <div class="post-list">
-      <article v-for="post in filteredPosts" :key="post.id" class="post-card">
-        <div class="post-card-body" style="cursor: pointer;" @click="openDetail(post.id)">
-          <h2>{{ post.title }}</h2>
-          <p>{{ post.content }}</p>
-          <div class="post-meta">
-            <span>{{ post.author }} · {{ post.createdAt }}</span>
-            <span>조회 {{ post.views }}</span>
-          </div>
-        </div>
-        <div class="post-actions">
-          <button class="text-button" type="button" @click="handleLike(post.id)">좋아요 {{ post.likes }}</button>
-          <button class="text-button" type="button" @click="handleBookmark(post.id)">{{ post.bookmarked ? '북마크 취소' : '북마크' }}</button>
-          <button class="text-button danger" type="button" @click="handleDelete(post.id)">삭제</button>
-        </div>
-      </article>
-      <p v-if="emptyStateMessage && !filteredPosts.length" class="empty-state">{{ emptyStateMessage }}</p>
+    <div class="board-post-list">
+      <BoardPostCard
+        v-for="post in filteredPosts"
+        :key="post.id"
+        :post="post"
+        @like="handleLike"
+        @bookmark="handleBookmark"
+      >
+        <template #actions>
+          <button
+            class="button board-button board-button--danger board-button--compact"
+            type="button"
+            @click="handleDelete(post.id)"
+          >
+            삭제
+          </button>
+        </template>
+      </BoardPostCard>
+
+      <p v-if="emptyStateMessage && !filteredPosts.length" class="empty-state">
+        {{ emptyStateMessage }}
+      </p>
     </div>
   </section>
 </template>
+
+<style scoped>
+.board-list-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.board-post-list {
+  display: grid;
+  gap: 14px;
+}
+
+@media (max-width: 760px) {
+  .board-list-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .board-list-toolbar-actions .button {
+    flex: 1 1 180px;
+  }
+}
+</style>

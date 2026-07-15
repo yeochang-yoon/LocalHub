@@ -439,8 +439,12 @@ onBeforeUnmount(() => {
         <div class="lightbox-image-wrap">
           <img :src="carouselImages[activeCarouselIndex]?.url" :alt="carouselImages[activeCarouselIndex]?.alt" />
         </div>
-        <button v-if="carouselImages.length > 1" class="lightbox-arrow lightbox-arrow--previous" type="button" aria-label="이전 사진" @click="moveCarousel(-1)">‹</button>
-        <button v-if="carouselImages.length > 1" class="lightbox-arrow lightbox-arrow--next" type="button" aria-label="다음 사진" @click="moveCarousel(1)">›</button>
+        <button v-if="carouselImages.length > 1" class="lightbox-arrow lightbox-arrow--previous" type="button" aria-label="이전 사진" @click="moveCarousel(-1)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5-7 7 7 7" /></svg>
+        </button>
+        <button v-if="carouselImages.length > 1" class="lightbox-arrow lightbox-arrow--next" type="button" aria-label="다음 사진" @click="moveCarousel(1)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7" /></svg>
+        </button>
         <footer>
           <div><strong>{{ content?.title }}</strong><span>{{ carouselImages[activeCarouselIndex]?.source }}</span></div>
           <span>{{ activeCarouselIndex + 1 }} / {{ carouselImages.length }}</span>
@@ -700,7 +704,8 @@ onBeforeUnmount(() => {
 .lightbox-image-wrap img { display: block; width: auto; max-width: 100%; height: auto; max-height: calc(100vh - 145px); object-fit: contain; box-shadow: 0 20px 60px rgba(0,0,0,.35); }
 .lightbox-close { position: absolute; top: 16px; right: 20px; display: flex; align-items: center; justify-content: center; width: 42px; height: 42px; padding: 0 0 3px; color: white; border: 1px solid rgba(255,255,255,.45); border-radius: 50%; background: rgba(255,255,255,.08); cursor: pointer; font-size: 29px; line-height: 1; }
 .lightbox-close:hover, .lightbox-close:focus-visible { outline: 0; background: var(--orange); }
-.lightbox-arrow { position: absolute; top: 50%; display: flex; align-items: center; justify-content: center; width: 52px; height: 52px; padding: 0; color: white; border: 1px solid rgba(255,255,255,.45); border-radius: 50%; background: rgba(255,255,255,.08); cursor: pointer; font-family: Arial, sans-serif; font-size: 39px; line-height: 1; transform: translateY(-50%); }
+.lightbox-arrow { position: absolute; top: 50%; display: flex; align-items: center; justify-content: center; width: 52px; height: 52px; padding: 0; color: white; border: 1px solid rgba(255,255,255,.45); border-radius: 50%; background: rgba(255,255,255,.08); cursor: pointer; transform: translateY(-50%); }
+.lightbox-arrow svg { display: block; width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .lightbox-arrow:hover, .lightbox-arrow:focus-visible { outline: 0; background: var(--orange); }
 .lightbox-arrow--previous { left: 18px; }
 .lightbox-arrow--next { right: 18px; }
@@ -909,7 +914,8 @@ onBeforeUnmount(() => {
 
 @media (max-width: 640px) {
   .photo-lightbox { padding: 55px 48px 18px; }
-  .lightbox-arrow { width: 38px; height: 38px; font-size: 30px; }
+  .lightbox-arrow { width: 38px; height: 38px; }
+  .lightbox-arrow svg { width: 22px; height: 22px; }
   .lightbox-arrow--previous { left: 6px; }
   .lightbox-arrow--next { right: 6px; }
   .photo-lightbox footer { align-items: flex-start; flex-direction: column; gap: 7px; }

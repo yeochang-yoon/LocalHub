@@ -5,3 +5,8 @@ dist/
 !.env.example
 *.local
 .DS_Store
+
+# SSAFY 제출 및 실습 자료
+/report/
+*.pdf
+*.xlsx

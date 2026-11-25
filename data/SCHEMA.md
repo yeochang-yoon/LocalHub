@@ -11,7 +11,7 @@
 | `region` | string | 수집 지역명 |
 | `contentType` | string | 콘텐츠 유형 한국어명 |
 | `contentTypeId` | string | 콘텐츠 유형 ID (아래 코드 참조) |
-| `total` | integer | 전체 항목 수 |
+| `total` | integer | 수집 당시 기록한 전체 건수. 실제 배열 길이와 다를 수 있음 |
 | `items` | object[] | POI 항목 배열 |
 
 ## contentTypeId 코드
@@ -25,7 +25,7 @@
 | 28 | 레포츠 |
 | 32 | 숙박 |
 | 38 | 쇼핑 |
-| 39 | 음식점 |
+| 39 | 음식점 (이 저장소에는 원본 파일 미포함) |
 
 ---
 
@@ -66,4 +66,4 @@
 - `mapx` / `mapy` 는 string 타입으로 저장됨. 사용 시 float 변환 필요.
 - `firstimage` 가 빈 문자열(`""`)인 경우 이미지 없음을 의미.
 - `addr1` 이 빈 문자열인 경우 주소 정보 미제공.
-- `cat1~3`, `lclsSystm1~3` 코드 정의는 상위 디렉토리의 `lclsSystemCode.json` 참조.
+- `cat1~3`, `lclsSystm1~3`은 관광 분류 체계 코드입니다. [TourAPI 원본 문서](https://www.data.go.kr/data/15101578/openapi.do)
